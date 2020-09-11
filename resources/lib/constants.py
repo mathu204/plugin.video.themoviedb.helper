@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 VALID_FILECHARS = "-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 LANGUAGES = [
@@ -11,33 +10,3 @@ LANGUAGES = [
     'nb-NO', 'nl-NL', 'no-NO', 'pl-PL', 'pt-BR', 'pt-PT', 'ro-RO', 'ru-RU', 'si-LK', 'sk-SK', 'sl-SI',
     'sr-RS', 'sv-SE', 'ta-IN', 'te-IN', 'th-TH', 'tl-PH', 'tr-TR', 'uk-UA', 'vi-VN', 'zh-CN', 'zh-HK',
     'zh-TW', 'zu-ZA']
-
-BASEDIR_MAIN = [
-    {
-        'info': 'dir_movie',
-        'name': 'Movies',
-        'icon': '{0}/resources/icons/tmdb/movies.png'},
-    {
-        'info': 'dir_tv',
-        'name': 'TV Shows',
-        'icon': '{0}/resources/icons/tmdb/tv.png'},
-    {
-        'info': 'dir_person',
-        'name': 'People',
-        'icon': '{0}/resources/icons/tmdb/cast.png'},
-    {
-        'info': 'dir_random',
-        'name': 'Randomised',
-        'icon': '{0}/resources/poster.png'},
-    {
-        'info': 'dir_discover',
-        'name': 'Discover',
-        'icon': '{0}/resources/poster.png'},
-    {
-        'info': 'dir_tmdb',
-        'name': 'TheMovieDb',
-        'icon': '{0}/resources/poster.png'},
-    {
-        'info': 'dir_trakt',
-        'name': 'Trakt',
-        'icon': '{0}/resources/trakt.png'}]

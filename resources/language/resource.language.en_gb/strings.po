@@ -866,6 +866,21 @@ msgctxt "#32171"
 msgid "[B][COLOR=red]Warning[/COLOR][/B] This list contains {} items"
 msgstr ""
 
+#: /resources/lib/constants.py
+msgctxt "#32172"
+msgid "People"
+msgstr ""
+
+#: /resources/lib/constants.py
+msgctxt "#32173"
+msgid "Randomised"
+msgstr ""
+
+#: /resources/lib/constants.py
+msgctxt "#32174"
+msgid "Discover"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""
