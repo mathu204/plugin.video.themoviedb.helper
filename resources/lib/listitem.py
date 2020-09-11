@@ -1,25 +1,34 @@
 import xbmcgui
+import resources.lib.utils as utils
 
 
 class ListItem(object):
-    def __init__(self):
-        self.label = None
-        self.label2 = None
-        self.path = None
-        self.imdb_id = None
-        self.tmdb_id = None
-        self.library = None
-        self.infolabels = {}
-        self.infoproperties = {}
-        self.art = {}
-        self.cast = []
-        self.contextmenu = []
-        self.streamdetails = {}
+    def __init__(
+            self, label='', label2='', path='', library='video', is_folder=False, params={},
+            infolabels={}, infoproperties={}, art={}, cast=[], contextmenu=[], streamdetails={}, uniqueids={},
+            **kwargs):
+        self.label = label
+        self.label2 = label2
+        self.path = path
+        self.params = params
+        self.library = library
+        self.is_folder = is_folder
+        self.infolabels = infolabels
+        self.infoproperties = infoproperties
+        self.art = art
+        self.cast = cast
+        self.contextmenu = contextmenu
+        self.streamdetails = streamdetails
+        self.uniqueids = uniqueids
 
-    def set_listitem(self):
-        listitem = xbmcgui.ListItem(label=self.label, label2=self.label2, path=self.path)
+    def get_url(self):
+        paramstring = '?{}'.format(utils.urlencode_params(**self.params)) if self.params else ''
+        return '{}{}'.format(self.path, paramstring)
+
+    def get_listitem(self):
+        listitem = xbmcgui.ListItem(label=self.label, label2=self.label2, path=self.get_url())
         listitem.setLabel2(self.label2)
-        listitem.setUniqueIDs({'imdb': self.imdb_id, 'tmdb': self.tmdb_id})
+        listitem.setUniqueIDs(self.uniqueids)
         listitem.setInfo(self.library, self.infolabels)
         listitem.setProperties(self.infoproperties)
         listitem.setArt(self.art)

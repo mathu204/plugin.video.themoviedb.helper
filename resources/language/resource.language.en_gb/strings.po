@@ -881,6 +881,191 @@ msgctxt "#32174"
 msgid "Discover"
 msgstr ""
 
+#: /resources/lib/plugin.py
+msgctxt "#32175"
+msgid "Popular"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32176"
+msgid "Top Rated"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32177"
+msgid "Upcoming"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32178"
+msgid "Trending Today"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32179"
+msgid "Trending This Week"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32180"
+msgid "In Theatres"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32181"
+msgid "Airing Today"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32182"
+msgid "Currently Airing"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32183"
+msgid "Next Aired Library"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32184"
+msgid "Highest Revenue"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32185"
+msgid "Most Voted"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32186"
+msgid "All"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32187"
+msgid "Collections"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32188"
+msgid "Reviews"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32189"
+msgid "TV Networks"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32190"
+msgid "Movie Studios"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32191"
+msgid "Images"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32192"
+msgid "Collection"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32193"
+msgid "Watchlist"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32194"
+msgid "Your Recently Watched"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32195"
+msgid "Your Most Watched"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32196"
+msgid "Your In-Progress"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32197"
+msgid "Your Next Episodes"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32198"
+msgid "Recommended For You"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32199"
+msgid "Based on Recently Watched"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32200"
+msgid "Based on Most Watched"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32201"
+msgid "Your"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32202"
+msgid "Airing This Week"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32203"
+msgid "Calendar"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32204"
+msgid "Trending"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32205"
+msgid "Most Played"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32206"
+msgid "Anticipated"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32207"
+msgid "Top 10 Box Office"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32208"
+msgid "Trending Lists"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32209"
+msgid "Popular Lists"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32210"
+msgid "Liked Lists"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32211"
+msgid "Your Lists"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""
