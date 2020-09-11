@@ -1,7 +1,8 @@
 import datetime
 import simplecache
+import resources.lib.utils as utils
 _cache = simplecache.SimpleCache()
-_cache_name = 'plugin.video.themoviedb.helper'
+_cache_name = 'plugin.video.themoviedb.helper.v4'
 
 
 def get_cache(cache_name):
@@ -29,6 +30,7 @@ def use_cache(func, *args, **kwargs):
     for key, value in kwargs.items():
         if value:
             cache_name = u'{0}&{1}={2}'.format(cache_name, key, value)
+    utils.kodi_log(cache_name, 1)
     my_cache = get_cache(cache_name) if not cache_refresh else None
     if my_cache:
         return my_cache

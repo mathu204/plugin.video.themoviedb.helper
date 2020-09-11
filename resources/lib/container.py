@@ -37,7 +37,7 @@ class Container(object):
     def list_tmdb(self, info=None, tmdb_type=None, page=None):
         items = TMDb().get_basic_list(info, tmdb_type, page=page)
         self.add_items(items)
-        self.finish_container()
+        self.finish_container(container_content=plugin.convert_type(tmdb_type, 'container'))
 
     def router(self):
         info = self.params.get('info')

@@ -21,7 +21,11 @@ class RequestAPI(object):
             request = utils.dictify(request)
         return request
 
-    def get_api_request(self, request=None, is_json=True, postdata=None, headers=None):
+    def get_api_request_json(self, request=None, postdata=None, headers=None):
+        request = self.get_api_request(request=request, postdata=postdata, headers=headers)
+        return request.json() if request else None
+
+    def get_api_request(self, request=None, postdata=None, headers=None):
         """
         Make the request to the API by passing a url request string
         """
@@ -84,7 +88,7 @@ class RequestAPI(object):
         cache_refresh = kwargs.pop('cache_refresh', False)
         request_url = self.get_request_url(*args, **kwargs)
         return cache.use_cache(
-            self.get_api_request, request_url,
+            self.get_api_request_json, request_url,
             cache_refresh=cache_refresh,
             cache_days=cache_days,
             cache_name=cache_name,
