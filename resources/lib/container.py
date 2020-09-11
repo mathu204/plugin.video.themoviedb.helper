@@ -2,7 +2,9 @@ import sys
 import xbmcplugin
 import resources.lib.utils as utils
 import resources.lib.plugin as plugin
+import resources.lib.constants as constants
 from resources.lib.listitem import ListItem
+from resources.lib.tmdb import TMDb
 
 
 class Container(object):
@@ -12,6 +14,8 @@ class Container(object):
         self.params = utils.parse_paramstring(sys.argv[2][1:])
 
     def add_items(self, items=None):
+        if not items:
+            return
         for i in items:
             listitem = ListItem(**i)
             xbmcplugin.addDirectoryItem(
@@ -30,8 +34,15 @@ class Container(object):
         self.add_items(items)
         self.finish_container()
 
-    def router(self, endpoint=None):
-        endpoint = endpoint or self.params.get('info')
-        if endpoint == 'pass':
+    def list_tmdb(self, info=None, tmdb_type=None, page=None):
+        items = TMDb().get_basic_list(info, tmdb_type, page=page)
+        self.add_items(items)
+        self.finish_container()
+
+    def router(self):
+        info = self.params.get('info')
+        if info == 'pass':
             return
-        return self.list_basedir(endpoint)
+        if info in constants.TMDB_BASIC_LISTS:
+            return self.list_tmdb(info, self.params.get('type'))
+        return self.list_basedir(info)

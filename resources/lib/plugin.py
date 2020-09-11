@@ -2,11 +2,24 @@
 # -*- coding: utf-8 -*-
 import xbmc
 import xbmcaddon
+from resources.lib.constants import LANGUAGES
 
 
 ADDON = xbmcaddon.Addon('plugin.video.themoviedb.helper')
 ADDONPATH = ADDON.getAddonInfo('path')
 PLUGINPATH = u'plugin://plugin.video.themoviedb.helper/'
+
+
+def get_language():
+    if ADDON.getSettingInt('language'):
+        return LANGUAGES[ADDON.getSettingInt('language')]
+    return 'en-US'
+
+
+def get_mpaa_prefix():
+    if ADDON.getSettingString('mpaa_prefix'):
+        return '{} '.format(ADDON.getSettingString('mpaa_prefix'))
+    return ''
 
 
 def convert_type(tmdb_type, output):
