@@ -1,5 +1,6 @@
 import resources.lib.plugin as plugin
 import resources.lib.utils as utils
+import resources.lib.cache as cache
 from resources.lib.requestapi import RequestAPI
 from resources.lib.plugin import ADDON, PLUGINPATH
 
@@ -12,6 +13,7 @@ TMDB_GENRE_IDS = {
     "Family": 10751, "Fantasy": 14, "History": 36, "Horror": 27, "Kids": 10762, "Music": 10402, "Mystery": 9648,
     "News": 10763, "Reality": 10764, "Romance": 10749, "Science Fiction": 878, "Sci-Fi & Fantasy": 10765, "Soap": 10766,
     "Talk": 10767, "TV Movie": 10770, "Thriller": 53, "War": 10752, "War & Politics": 10768, "Western": 37}
+APPEND_TO_RESPONSE = 'credits,images,release_dates,content_ratings,external_ids,videos,movie_credits,tv_credits'
 
 
 class TMDb(RequestAPI):
@@ -32,6 +34,7 @@ class TMDb(RequestAPI):
         self.iso_country = language[-2:]
         self.req_language = '{0}-{1}&include_image_language={0},null'.format(self.iso_language, self.iso_country)
         self.mpaa_prefix = mpaa_prefix
+        self.append_to_response = APPEND_TO_RESPONSE
 
     def get_title(self, item):
         if item.get('title'):
@@ -125,8 +128,25 @@ class TMDb(RequestAPI):
             items.append({'next_page': utils.try_parse_int(response.get('page', 0)) + 1})
         return items
 
+    def set_details(self, item, tmdb_type):
+        details = self.set_basic_info(item, tmdb_type)
+        return details
+
+    def get_details(self, tmdb_type, tmdb_id, cache_only=False, cache_refresh=False):
+        details = self.request_details(
+            tmdb_type, tmdb_id,
+            append_to_response=self.append_to_response,
+            cache_only=cache_only, cache_refresh=cache_refresh)
+        return cache.use_cache(
+            self.set_details, item=details, tmdb_type=tmdb_type,
+            cache_name='plugin.video.themoviedb.helper.detailed.item', cache_days=self.cache_long,
+            cache_only=cache_only, cache_refresh=cache_refresh)
+
     def get_search_list(self, tmdb_type, query=None, page=None, **kwargs):
         return self.get_basic_list('search/{}'.format(tmdb_type), tmdb_type, page=page, key='results', query=query, **kwargs)
 
     def request_list(self, *args, **kwargs):
         return self.get_request_sc(*args, language=self.req_language, **kwargs)
+
+    def request_details(self, *args, **kwargs):
+        return self.get_request_lc(*args, language=self.req_language, **kwargs)

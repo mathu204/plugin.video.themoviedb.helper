@@ -33,6 +33,13 @@ class Container(object):
         xbmcplugin.setContent(self.handle, container_content)  # Container.Content
         xbmcplugin.endOfDirectory(self.handle, updateListing=update_listing)
 
+    def list_details(self, tmdb_type, tmdb_id=None, **kwargs):
+        base_item = TMDb().get_details(tmdb_type, tmdb_id)
+        items = []
+        items.append(base_item)
+        self.add_items(items)
+        self.finish_container(container_content=plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER))
+
     def list_searchdir(self, tmdb_type, clear_cache=False, **kwargs):
         cache.set_search_history(tmdb_type, clear_cache=True) if clear_cache else None
         update_listing = True if clear_cache else False
@@ -109,6 +116,8 @@ class Container(object):
         info = self.params.get('info')
         if info == 'pass':
             return
+        if info == 'details':
+            return self.list_details(self.params.get('type'), **self.params)
         if info == 'dir_search':
             return self.list_searchdir(self.params.get('type'), **self.params)
         if info == 'search':
