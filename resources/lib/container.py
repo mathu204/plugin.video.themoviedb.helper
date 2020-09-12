@@ -17,7 +17,7 @@ class Container(object):
         if not items:
             return
         for i in items:
-            listitem = ListItem(**i)
+            listitem = ListItem(parent_params=self.params, **i)
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
                 url=listitem.get_url(),
@@ -44,5 +44,5 @@ class Container(object):
         if info == 'pass':
             return
         if info in constants.TMDB_BASIC_LISTS:
-            return self.list_tmdb(info, self.params.get('type'), self.params.get('page'))
+            return self.list_tmdb(info, self.params.get('type'), self.params.get('page', 1))
         return self.list_basedir(info)
