@@ -1,7 +1,7 @@
 import resources.lib.plugin as plugin
 import resources.lib.utils as utils
 from resources.lib.requestapi import RequestAPI
-from resources.lib.plugin import ADDON
+from resources.lib.plugin import ADDON, PLUGINPATH
 
 
 IMAGEPATH_ORIGINAL = 'https://image.tmdb.org/t/p/original'
@@ -78,7 +78,7 @@ class TMDb(RequestAPI):
         infolabels = infolabels or {}
         infolabels['title'] = self.get_title(item)
         infolabels['originaltitle'] = item.get('original_title')
-        infolabels['mediatype'] = plugin.convert_type(tmdb_type, 'dbtype')
+        infolabels['mediatype'] = plugin.convert_type(tmdb_type, plugin.TYPE_DB)
         infolabels['rating'] = '{:0,.1f}'.format(utils.try_parse_float(item.get('vote_average')))
         infolabels['votes'] = '{:0,.0f}'.format(item.get('vote_count')) if item.get('vote_count') else None
         infolabels['plot'] = item.get('overview') or item.get('biography') or item.get('content')
@@ -95,20 +95,38 @@ class TMDb(RequestAPI):
         art['fanart'] = self.get_fanart(item)
         return art
 
-    def get_basic_list(self, info, tmdb_type, page=None):
-        """ {tmdb_type}/{info} """
-        response = self.request_list(tmdb_type, info, page=page)
-        results = response.get('results', []) if response else []
-        items = []
-        for i in results:
-            item = {}
-            item['art'] = self.set_basic_art(i)
-            item['infolabels'] = self.set_basic_infolabels(i, tmdb_type)
-            item['label'] = self.get_title(i)
-            items.append(item)
+    def set_unique_ids(self, item, unique_ids=None):
+        unique_ids = unique_ids or {}
+        unique_ids['tmdb'] = item.get('id')
+        return unique_ids
+
+    def set_basic_params(self, item, tmdb_type, params=None):
+        params = params or {}
+        params['info'] = 'details'
+        params['type'] = tmdb_type
+        params['tmdb_id'] = item.get('id')
+        return params
+
+    def set_basic_info(self, item, tmdb_type, base_item=None):
+        base_item = base_item or {}
+        base_item['label'] = self.get_title(item)
+        base_item['art'] = self.set_basic_art(item)
+        base_item['infolabels'] = self.set_basic_infolabels(item, tmdb_type)
+        base_item['unique_ids'] = self.set_unique_ids(item)
+        base_item['params'] = self.set_basic_params(item, tmdb_type)
+        base_item['path'] = PLUGINPATH
+        return base_item
+
+    def get_basic_list(self, path, tmdb_type, page=None, key='results', **kwargs):
+        response = self.request_list(path, page=page, **kwargs)
+        results = response.get(key, []) if response else []
+        items = [self.set_basic_info(i, tmdb_type) for i in results if i]
         if page and utils.try_parse_int(response.get('page', 0)) < utils.try_parse_int(response.get('total_pages', 0)):
-            items.append({'next_page': utils.try_parse_int(response.get('page', 0))})
+            items.append({'next_page': utils.try_parse_int(response.get('page', 0)) + 1})
         return items
+
+    def get_search_list(self, tmdb_type, query=None, page=None, **kwargs):
+        return self.get_basic_list('search/{}'.format(tmdb_type), tmdb_type, page=page, key='results', query=query, **kwargs)
 
     def request_list(self, *args, **kwargs):
         return self.get_request_sc(*args, language=self.req_language, **kwargs)
