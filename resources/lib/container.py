@@ -22,6 +22,7 @@ class Container(object):
             return
         for i in items:
             listitem = ListItem(parent_params=self.params, **i)
+            listitem.get_details()
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
                 url=listitem.get_url(),

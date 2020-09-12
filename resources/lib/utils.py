@@ -113,3 +113,20 @@ def dictify(r, root=True):
 
 def dict_to_list(items, key):
     return [i.get(key) for i in items if i.get(key)]
+
+
+def merge_two_dicts(x, y):
+    z = x.copy()   # start with x's keys and values
+    z.update(y)    # modifies z with y's keys and values & returns None
+    return z
+
+
+def merge_two_dicts_deep(x, y):
+    """ Deep merge y keys into copy of x """
+    z = x.copy()
+    for k, v in y.items():
+        if isinstance(v, dict):
+            merge_two_dicts_deep(z.setdefault(k, {}), v)
+        elif v:
+            z[k] = v
+    return z

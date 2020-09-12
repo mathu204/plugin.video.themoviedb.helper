@@ -13,7 +13,7 @@ TMDB_GENRE_IDS = {
     "Family": 10751, "Fantasy": 14, "History": 36, "Horror": 27, "Kids": 10762, "Music": 10402, "Mystery": 9648,
     "News": 10763, "Reality": 10764, "Romance": 10749, "Science Fiction": 878, "Sci-Fi & Fantasy": 10765, "Soap": 10766,
     "Talk": 10767, "TV Movie": 10770, "Thriller": 53, "War": 10752, "War & Politics": 10768, "Western": 37}
-APPEND_TO_RESPONSE = 'credits,images,release_dates,content_ratings,external_ids,videos,movie_credits,tv_credits'
+APPEND_TO_RESPONSE = ''
 
 
 class TMDb(RequestAPI):
@@ -91,6 +91,12 @@ class TMDb(RequestAPI):
         infolabels['country'] = item.get('origin_country')
         return infolabels
 
+    def set_basic_infoproperties(self, item, tmdb_type, infoproperties=None):
+        infoproperties = infoproperties or {}
+        infoproperties['tmdb_type'] = tmdb_type
+        infoproperties['tmdb_id'] = item.get('id')
+        return infoproperties
+
     def set_basic_art(self, item, art=None):
         art = art or {}
         art['thumb'] = self.get_icon(item)
@@ -112,12 +118,14 @@ class TMDb(RequestAPI):
 
     def set_basic_info(self, item, tmdb_type, base_item=None):
         base_item = base_item or {}
-        base_item['label'] = self.get_title(item)
-        base_item['art'] = self.set_basic_art(item)
-        base_item['infolabels'] = self.set_basic_infolabels(item, tmdb_type)
-        base_item['unique_ids'] = self.set_unique_ids(item)
-        base_item['params'] = self.set_basic_params(item, tmdb_type)
-        base_item['path'] = PLUGINPATH
+        if item and tmdb_type:
+            base_item['label'] = self.get_title(item)
+            base_item['art'] = self.set_basic_art(item)
+            base_item['infolabels'] = self.set_basic_infolabels(item, tmdb_type)
+            base_item['infoproperties'] = self.set_basic_infoproperties(item, tmdb_type)
+            base_item['unique_ids'] = self.set_unique_ids(item)
+            base_item['params'] = self.set_basic_params(item, tmdb_type)
+            base_item['path'] = PLUGINPATH
         return base_item
 
     def get_basic_list(self, path, tmdb_type, page=None, key='results', **kwargs):
@@ -128,8 +136,55 @@ class TMDb(RequestAPI):
             items.append({'next_page': utils.try_parse_int(response.get('page', 0)) + 1})
         return items
 
+    def get_trailer(self, item):
+        if not isinstance(item, dict):
+            return
+        videos = item.get('videos') or {}
+        videos = videos.get('results') or []
+        for i in videos:
+            if i.get('type', '') != 'Trailer' or i.get('site', '') != 'YouTube' or not i.get('key'):
+                continue
+            return 'plugin://plugin.video.youtube/play/?video_id={0}'.format(i.get('key'))
+
+    def get_mpaa_rating(self, item):
+        if not item.get('release_dates', {}) or not item.get('release_dates', {}).get('results'):
+            return
+        for i in item.get('release_dates').get('results'):
+            if not i.get('iso_3166_1') or i.get('iso_3166_1') != self.iso_country:
+                continue
+            for i in sorted(i.get('release_dates', []), key=lambda k: k.get('type')):
+                if i.get('certification'):
+                    return '{0}{1}'.format(self.mpaa_prefix, i.get('certification'))
+
+    def get_collection_name(self, item):
+        if item.get('belongs_to_collection', {}) and item.get('belongs_to_collection', {}).get('name'):
+            return item.get('belongs_to_collection', {}).get('name')
+
+    def set_detailed_infolabels(self, item, tmdb_type, infolabels=None):
+        infolabels = infolabels or {}
+        infolabels['set'] = self.get_collection_name(item)
+        infolabels['genre'] = utils.dict_to_list(item.get('genres', []), 'name')
+        infolabels['imdbnumber'] = item.get('imdb_id') or item.get('external_ids', {}).get('imdb_id')
+        infolabels['studio'] = utils.dict_to_list(item.get('production_companies', []), 'name')
+        infolabels['country'] = utils.dict_to_list(item.get('production_countries', []), 'name')
+        infolabels['duration'] = utils.try_parse_int(item.get('runtime', 0)) * 60
+        infolabels['status'] = item.get('status')
+        infolabels['tagline'] = item.get('tagline')
+        infolabels['director'] = [i.get('name') for i in item.get('credits', {}).get('crew', []) if i.get('name') and i.get('job') == 'Director']
+        infolabels['writer'] = [i.get('name') for i in item.get('credits', {}).get('crew', []) if i.get('name') and i.get('department') == 'Writing']
+        infolabels['trailer'] = self.get_trailer(item)
+        infolabels['mpaa'] = self.get_mpaa_rating(item)
+        return infolabels
+
+    def set_detailed_info(self, item, tmdb_type, base_item=None):
+        base_item = base_item or {}
+        if item and tmdb_type:
+            base_item = self.set_basic_info(item, tmdb_type, base_item)
+            base_item['infolabels'] = self.set_detailed_infolabels(item, tmdb_type, base_item.get('infolabels', {}))
+        return base_item
+
     def set_details(self, item, tmdb_type):
-        details = self.set_basic_info(item, tmdb_type)
+        details = self.set_detailed_info(item, tmdb_type)
         return details
 
     def get_details(self, tmdb_type, tmdb_id, cache_only=False, cache_refresh=False):
@@ -139,7 +194,7 @@ class TMDb(RequestAPI):
             cache_only=cache_only, cache_refresh=cache_refresh)
         return cache.use_cache(
             self.set_details, item=details, tmdb_type=tmdb_type,
-            cache_name='plugin.video.themoviedb.helper.detailed.item', cache_days=self.cache_long,
+            cache_name='plugin.video.themoviedb.helper.detailed.item.v4', cache_days=self.cache_long,
             cache_only=cache_only, cache_refresh=cache_refresh)
 
     def get_search_list(self, tmdb_type, query=None, page=None, **kwargs):

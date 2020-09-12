@@ -2,6 +2,7 @@ import xbmc
 import xbmcgui
 import resources.lib.utils as utils
 from resources.lib.plugin import ADDONPATH, PLUGINPATH
+from resources.lib.tmdb import TMDb
 
 
 class ListItem(object):
@@ -39,6 +40,19 @@ class ListItem(object):
         if not self.art.get('fanart'):
             self.art['fanart'] = '{}/fanart.jpg'.format(ADDONPATH)
         return self.art
+
+    def get_details(self, cache_only=True):
+        tmdb_type = self.infoproperties.get('tmdb_type')
+        tmdb_id = self.infoproperties.get('tmdb_id')
+        if not tmdb_type or not tmdb_id:
+            return
+        details = TMDb().get_details(tmdb_type, tmdb_id, cache_only=cache_only)
+        if not details:
+            return
+        self.infolabels = utils.merge_two_dicts_deep(self.infolabels, details.get('infolabels', {}))
+        self.infoproperties = utils.merge_two_dicts_deep(self.infoproperties, details.get('infoproperties', {}))
+        self.art = utils.merge_two_dicts_deep(self.art, details.get('art', {}))
+        self.cast += details.get('cast', [])
 
     def get_url(self):
         paramstring = '?{}'.format(utils.urlencode_params(**self.params)) if self.params else ''
