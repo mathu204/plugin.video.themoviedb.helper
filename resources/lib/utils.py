@@ -109,3 +109,7 @@ def dictify(r, root=True):
             d[x.tag] = []
         d[x.tag].append(dictify(x, False))
     return d
+
+
+def dict_to_list(items, key):
+    return [i.get(key) for i in items if i.get(key)]

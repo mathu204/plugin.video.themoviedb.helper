@@ -44,5 +44,5 @@ class Container(object):
         if info == 'pass':
             return
         if info in constants.TMDB_BASIC_LISTS:
-            return self.list_tmdb(info, self.params.get('type'))
+            return self.list_tmdb(info, self.params.get('type'), self.params.get('page'))
         return self.list_basedir(info)
