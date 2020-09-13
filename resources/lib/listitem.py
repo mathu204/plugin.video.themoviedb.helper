@@ -31,6 +31,7 @@ class ListItem(object):
         self.art['thumb'] = '{}/resources/icons/tmdb/nextpage.png'.format(ADDONPATH)
         self.params = self.parent_params.copy()
         self.params['page'] = next_page
+        self.params.pop('update_listing', None)  # Just in case we updated the listing for search results
         self.path = PLUGINPATH
         self.is_folder = True
 
@@ -49,10 +50,10 @@ class ListItem(object):
         details = TMDb().get_details(tmdb_type, tmdb_id, cache_only=cache_only)
         if not details:
             return
-        self.infolabels = utils.merge_two_dicts_deep(self.infolabels, details.get('infolabels', {}))
-        self.infoproperties = utils.merge_two_dicts_deep(self.infoproperties, details.get('infoproperties', {}))
-        self.art = utils.merge_two_dicts_deep(self.art, details.get('art', {}))
-        self.cast += details.get('cast', [])
+        self.infolabels = utils.merge_two_dicts(details.get('infolabels', {}), self.infolabels)
+        self.infoproperties = utils.merge_two_dicts(details.get('infoproperties', {}), self.infoproperties)
+        self.art = utils.merge_two_dicts(details.get('art', {}), self.art)
+        self.cast = self.cast or details.get('cast', [])
 
     def get_url(self):
         paramstring = '?{}'.format(utils.urlencode_params(**self.params)) if self.params else ''

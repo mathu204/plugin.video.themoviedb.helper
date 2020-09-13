@@ -163,7 +163,7 @@ class TMDb(RequestAPI):
         response = self.request_list(path, page=page, **kwargs)
         results = response.get(key, []) if response else []
         items = [self.set_basic_info(i, tmdb_type) for i in results if i]
-        if page and utils.try_parse_int(response.get('page', 0)) < utils.try_parse_int(response.get('total_pages', 0)):
+        if utils.try_parse_int(response.get('page', 0)) < utils.try_parse_int(response.get('total_pages', 0)):
             items.append({'next_page': utils.try_parse_int(response.get('page', 0)) + 1})
         return items
 

@@ -16,11 +16,18 @@ class Container(object):
         self.handle = int(sys.argv[1])
         self.paramstring = utils.try_decode_string(sys.argv[2][1:])
         self.params = utils.parse_paramstring(sys.argv[2][1:])
+        self.allow_pagination = True
+        self.update_listing = False
+        self.plugin_category = ''
+        self.container_content = ''
+        self.container_update = None
 
-    def add_items(self, items=None):
+    def add_items(self, items=None, allow_pagination=True):
         if not items:
             return
         for i in items:
+            if not allow_pagination and 'next_page' in i:
+                continue
             listitem = ListItem(parent_params=self.params, **i)
             listitem.get_details()
             xbmcplugin.addDirectoryItem(
@@ -38,70 +45,69 @@ class Container(object):
         base_item = TMDb().get_details(tmdb_type, tmdb_id)
         items = []
         items.append(base_item)
-        self.add_items(items)
-        self.finish_container(container_content=plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER))
+        self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
+        return items
+
+    def list_searchdir_clear(self, tmdb_type):
+        cache.set_search_history(tmdb_type, clear_cache=True)
+        xbmc.executebuiltin('Container.Refresh')
 
     def list_searchdir(self, tmdb_type, clear_cache=False, **kwargs):
-        cache.set_search_history(tmdb_type, clear_cache=True) if clear_cache else None
-        update_listing = True if clear_cache else False
-        base_item = {}
-        base_item['label'] = '{} {}'.format(xbmc.getLocalizedString(137), plugin.convert_type(tmdb_type, plugin.TYPE_PLURAL))
-        base_item['art'] = {'thumb': '{}/resources/icons/tmdb/search.png'.format(ADDONPATH)}
-        base_item['params'] = kwargs.copy() or {}
-        base_item['params']['info'] = 'search'
+        if clear_cache:
+            return self.list_searchdir_clear(tmdb_type)
+
+        base_item = {
+            'label': '{} {}'.format(xbmc.getLocalizedString(137), plugin.convert_type(tmdb_type, plugin.TYPE_PLURAL)),
+            'art': {'thumb': '{}/resources/icons/tmdb/search.png'.format(ADDONPATH)},
+            'params': utils.merge_two_dicts(kwargs or {}, {'info': 'search'})}
         items = []
         items.append(base_item)
+
         history = cache.get_search_history(tmdb_type)
         history.reverse()
         for i in history:
-            item = {}
-            item['label'] = i
-            item['art'] = base_item.get('art')
-            item['params'] = base_item.get('params').copy()
-            item['params']['query'] = i
+            item = {
+                'label': i,
+                'art': base_item.get('art'),
+                'params': utils.merge_two_dicts(base_item.get('params', {}), {'query': i})}
             items.append(item)
         if history:
-            item = {}
-            item['label'] = ADDON.getLocalizedString(32121)
-            item['art'] = base_item.get('art')
-            item['params'] = base_item.get('params').copy()
-            item['params']['info'] = 'dir_search'
-            item['params']['clear_cache'] = 'True'
+            item = {
+                'label': ADDON.getLocalizedString(32121),
+                'art': base_item.get('art'),
+                'params': utils.merge_two_dicts(base_item.get('params', {}), {'info': 'dir_search', 'clear_cache': 'True'})}
             items.append(item)
-        self.add_items(items)
-        self.finish_container(update_listing=update_listing)
+        return items
 
     def list_search(self, tmdb_type, query=None, update_listing=False, page=None, **kwargs):
         original_query = query
         query = query or cache.set_search_history(
             query=utils.try_decode_string(xbmcgui.Dialog().input(ADDON.getLocalizedString(32044), type=xbmcgui.INPUT_ALPHANUM)),
             tmdb_type=tmdb_type)
+
         if not query:
             return
 
-        update_listing = True if update_listing else False
-        self.add_items(TMDb().get_search_list(
+        self.update_listing = True if update_listing else False
+        self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
+        items = TMDb().get_search_list(
             tmdb_type=tmdb_type, query=query, page=page,
             year=kwargs.get('year'),
             first_air_date_year=kwargs.get('first_air_date_year'),
-            primary_release_year=kwargs.get('primary_release_year')))
-        self.finish_container(
-            container_content=plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER),
-            update_listing=update_listing)
+            primary_release_year=kwargs.get('primary_release_year'))
 
         if not original_query:
-            params = kwargs.copy() if kwargs else {}
-            params['info'] = 'search'
-            params['type'] = tmdb_type
-            params['page'] = page
-            params['query'] = query
-            params['update_listing'] = 'True'
-            xbmc.executebuiltin('Container.Update({}?{})'.format(PLUGINPATH, utils.urlencode_params(**params)))
+            params = utils.merge_two_dicts(kwargs or {}, {
+                'info': 'search', 'type': tmdb_type, 'page': page, 'query': query,
+                'update_listing': 'True'})
+            self.container_update = '{}?{}'.format(PLUGINPATH, utils.urlencode_params(**params))
+            # Trigger container update using new path with query after adding items
+            # Prevents onback from re-prompting for user input by re-writing path
+
+        return items
 
     def list_basedir(self, info=None):
-        items = plugin.get_basedir_items(info)
-        self.add_items(items)
-        self.finish_container()
+        return plugin.get_basedir_items(info)
 
     def list_tmdb(self, tmdb_type, info=None, tmdb_id=None, page=None, **kwargs):
         info_model = constants.TMDB_BASIC_LISTS.get(info)
@@ -110,10 +116,10 @@ class Container(object):
             tmdb_type=tmdb_type,
             key=info_model.get('key', 'results'),
             page=page)
-        self.add_items(items)
-        self.finish_container(container_content=plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER))
+        self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
+        return items
 
-    def router(self):
+    def get_items_router(self):
         info = self.params.get('info')
         if info == 'pass':
             return
@@ -130,3 +136,15 @@ class Container(object):
         if info in constants.TMDB_BASIC_LISTS:
             return self.list_tmdb(self.params.get('type'), **self.params)
         return self.list_basedir(info)
+
+    def get_directory(self):
+        items = self.get_items_router()
+        if not items:
+            return
+        self.add_items(items, allow_pagination=self.allow_pagination)
+        self.finish_container(
+            update_listing=self.update_listing,
+            plugin_category=self.plugin_category,
+            container_content=self.container_content)
+        if self.container_update:
+            xbmc.executebuiltin('Container.Update({})'.format(self.container_update))
