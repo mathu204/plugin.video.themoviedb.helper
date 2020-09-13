@@ -225,14 +225,14 @@ class TMDb(RequestAPI):
             cache_only=cache_only, cache_refresh=cache_refresh)
         return cache.use_cache(
             self.set_details, item=details, tmdb_type=tmdb_type,
-            cache_name='plugin.video.themoviedb.helper.detailed.item.v4', cache_days=self.cache_long,
-            cache_only=cache_only, cache_refresh=cache_refresh)
+            cache_name='detailed.item.{}.{}'.format(tmdb_type, tmdb_id),
+            cache_days=self.cache_long, cache_only=cache_only, cache_refresh=cache_refresh)
 
     def get_search_list(self, tmdb_type, query=None, page=None, **kwargs):
         return self.get_basic_list('search/{}'.format(tmdb_type), tmdb_type, page=page, key='results', query=query, **kwargs)
 
     def request_list(self, *args, **kwargs):
-        return self.get_request_sc(*args, language=self.req_language, **kwargs)
+        return self.get_request_sc(*args, language=self.req_language, region=self.iso_country, **kwargs)
 
     def request_details(self, *args, **kwargs):
-        return self.get_request_lc(*args, language=self.req_language, **kwargs)
+        return self.get_request_lc(*args, language=self.req_language, region=self.iso_country, **kwargs)

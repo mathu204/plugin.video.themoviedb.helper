@@ -83,7 +83,7 @@ class RequestAPI(object):
     def get_request(self, *args, **kwargs):
         """ Get API request from cache (or online if no cached version) """
         cache_days = kwargs.pop('cache_days', self.cache_long)
-        cache_name = kwargs.pop('cache_name', None)
+        cache_name = kwargs.pop('cache_name', '')
         cache_only = kwargs.pop('cache_only', False)
         cache_refresh = kwargs.pop('cache_refresh', False)
         request_url = self.get_request_url(*args, **kwargs)

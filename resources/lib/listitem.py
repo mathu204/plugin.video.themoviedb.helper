@@ -24,11 +24,14 @@ class ListItem(object):
         self.context_menu = context_menu or []
         self.stream_details = stream_details or {}
         self.unique_ids = unique_ids or {}
-        self.set_next_page(next_page) if next_page else None
+        self.set_as_next_page(next_page)
 
-    def set_next_page(self, next_page):
+    def set_as_next_page(self, next_page=None):
+        if not next_page:
+            return
         self.label = xbmc.getLocalizedString(33078)
         self.art['thumb'] = '{}/resources/icons/tmdb/nextpage.png'.format(ADDONPATH)
+        self.infoproperties['specialsort'] = 'bottom'
         self.params = self.parent_params.copy()
         self.params['page'] = next_page
         self.params.pop('update_listing', None)  # Just in case we updated the listing for search results

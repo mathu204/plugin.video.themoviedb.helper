@@ -21,14 +21,15 @@ class Container(object):
         self.plugin_category = ''
         self.container_content = ''
         self.container_update = None
+        self.container_refresh = False
 
-    def add_items(self, items=None, allow_pagination=True):
+    def add_items(self, items=None, allow_pagination=True, parent_params=None):
         if not items:
             return
         for i in items:
             if not allow_pagination and 'next_page' in i:
                 continue
-            listitem = ListItem(parent_params=self.params, **i)
+            listitem = ListItem(parent_params=parent_params, **i)
             listitem.get_details()
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
@@ -50,7 +51,7 @@ class Container(object):
 
     def list_searchdir_clear(self, tmdb_type):
         cache.set_search_history(tmdb_type, clear_cache=True)
-        xbmc.executebuiltin('Container.Refresh')
+        self.container_refresh = True
 
     def list_searchdir(self, tmdb_type, clear_cache=False, **kwargs):
         if clear_cache:
@@ -59,7 +60,8 @@ class Container(object):
         base_item = {
             'label': '{} {}'.format(xbmc.getLocalizedString(137), plugin.convert_type(tmdb_type, plugin.TYPE_PLURAL)),
             'art': {'thumb': '{}/resources/icons/tmdb/search.png'.format(ADDONPATH)},
-            'params': utils.merge_two_dicts(kwargs or {}, {'info': 'search'})}
+            'infoproperties': {'specialsort': 'top'},
+            'params': utils.merge_two_dicts(kwargs, {'info': 'search'})}
         items = []
         items.append(base_item)
 
@@ -97,7 +99,7 @@ class Container(object):
             primary_release_year=kwargs.get('primary_release_year'))
 
         if not original_query:
-            params = utils.merge_two_dicts(kwargs or {}, {
+            params = utils.merge_two_dicts(kwargs, {
                 'info': 'search', 'type': tmdb_type, 'page': page, 'query': query,
                 'update_listing': 'True'})
             self.container_update = '{}?{}'.format(PLUGINPATH, utils.urlencode_params(**params))
@@ -119,32 +121,34 @@ class Container(object):
         self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
         return items
 
-    def get_items_router(self):
-        info = self.params.get('info')
+    def get_items_router(self, **kwargs):
+        info = kwargs.get('info')
         if info == 'pass':
             return
         if info == 'dir_search':
-            return self.list_searchdir(self.params.get('type'), **self.params)
+            return self.list_searchdir(kwargs.get('type'), **kwargs)
         if info == 'search':
-            return self.list_search(self.params.get('type'), **self.params)
+            return self.list_search(kwargs.get('type'), **kwargs)
 
-        if self.params.get('query') and not self.params.get('tmdb_id'):
-            self.params['tmdb_id'] = TMDb().get_tmdb_id(self.params.get('type'), **self.params)
+        if kwargs.get('query') and not kwargs.get('tmdb_id'):
+            kwargs['tmdb_id'] = TMDb().get_tmdb_id(kwargs.get('type'), **kwargs)
 
         if info == 'details':
-            return self.list_details(self.params.get('type'), **self.params)
+            return self.list_details(kwargs.get('type'), **kwargs)
         if info in constants.TMDB_BASIC_LISTS:
-            return self.list_tmdb(self.params.get('type'), **self.params)
+            return self.list_tmdb(kwargs.get('type'), **kwargs)
         return self.list_basedir(info)
 
     def get_directory(self):
-        items = self.get_items_router()
+        items = self.get_items_router(**self.params)
         if not items:
             return
-        self.add_items(items, allow_pagination=self.allow_pagination)
+        self.add_items(items, allow_pagination=self.allow_pagination, parent_params=self.params)
         self.finish_container(
             update_listing=self.update_listing,
             plugin_category=self.plugin_category,
             container_content=self.container_content)
         if self.container_update:
             xbmc.executebuiltin('Container.Update({})'.format(self.container_update))
+        if self.container_refresh:
+            xbmc.executebuiltin('Container.Refresh')
