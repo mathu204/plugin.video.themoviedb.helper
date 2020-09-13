@@ -13,7 +13,7 @@ TMDB_GENRE_IDS = {
     "Family": 10751, "Fantasy": 14, "History": 36, "Horror": 27, "Kids": 10762, "Music": 10402, "Mystery": 9648,
     "News": 10763, "Reality": 10764, "Romance": 10749, "Science Fiction": 878, "Sci-Fi & Fantasy": 10765, "Soap": 10766,
     "Talk": 10767, "TV Movie": 10770, "Thriller": 53, "War": 10752, "War & Politics": 10768, "Western": 37}
-APPEND_TO_RESPONSE = ''
+APPEND_TO_RESPONSE = 'credits,images,release_dates,content_ratings,external_ids,videos,movie_credits,tv_credits'
 
 
 class TMDb(RequestAPI):
@@ -35,6 +35,37 @@ class TMDb(RequestAPI):
         self.req_language = '{0}-{1}&include_image_language={0},null'.format(self.iso_language, self.iso_country)
         self.mpaa_prefix = mpaa_prefix
         self.append_to_response = APPEND_TO_RESPONSE
+
+    def get_tmdb_id(self, tmdb_type=None, imdb_id=None, tvdb_id=None, query=None, year=None, episode_year=None, **kwargs):
+        func = self.get_request_sc
+        if not tmdb_type:
+            return
+        request = None
+        if tmdb_type == 'genre' and query:
+            return TMDB_GENRE_IDS.get(query, '')
+        elif imdb_id:
+            request = func('find', imdb_id, language=self.req_language, external_source='imdb_id')
+            request = request.get('{0}_results'.format(tmdb_type), [])
+        elif tvdb_id:
+            request = func('find', tvdb_id, language=self.req_language, external_source='tvdb_id')
+            request = request.get('{0}_results'.format(tmdb_type), [])
+        elif query:
+            query = query.split(' (', 1)[0]  # Scrub added (Year) or other cruft in parentheses () added by Addons or TVDb
+            if tmdb_type == 'tv':
+                request = func('search', tmdb_type, language=self.req_language, query=query, first_air_date_year=year)
+            else:
+                request = func('search', tmdb_type, language=self.req_language, query=query, year=year)
+            request = request.get('results', [])
+        if not request:
+            return
+        if tmdb_type == 'tv' and episode_year and len(request) > 1:
+            for i in sorted(request, key=lambda k: k.get('first_air_date', ''), reverse=True):
+                if not i.get('first_air_date'):
+                    continue
+                if utils.try_parse_int(i.get('first_air_date', '9999')[:4]) <= utils.try_parse_int(episode_year):
+                    if query in [i.get('name'), i.get('original_name')]:
+                        return i.get('id')
+        return request[0].get('id')
 
     def get_title(self, item):
         if item.get('title'):

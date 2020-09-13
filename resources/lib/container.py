@@ -17,7 +17,7 @@ class Container(object):
         self.paramstring = utils.try_decode_string(sys.argv[2][1:])
         self.params = utils.parse_paramstring(sys.argv[2][1:])
 
-    def add_items(self, items=None, url_info=None):
+    def add_items(self, items=None):
         if not items:
             return
         for i in items:
@@ -103,10 +103,10 @@ class Container(object):
         self.add_items(items)
         self.finish_container()
 
-    def list_tmdb(self, tmdb_type, info=None, page=None, **kwargs):
+    def list_tmdb(self, tmdb_type, info=None, tmdb_id=None, page=None, **kwargs):
         info_model = constants.TMDB_BASIC_LISTS.get(info)
         items = TMDb().get_basic_list(
-            path=info_model.get('path', '').format(type=tmdb_type),
+            path=info_model.get('path', '').format(type=tmdb_type, tmdb_id=tmdb_id),
             tmdb_type=tmdb_type,
             key=info_model.get('key', 'results'),
             page=page)
@@ -117,12 +117,16 @@ class Container(object):
         info = self.params.get('info')
         if info == 'pass':
             return
-        if info == 'details':
-            return self.list_details(self.params.get('type'), **self.params)
         if info == 'dir_search':
             return self.list_searchdir(self.params.get('type'), **self.params)
         if info == 'search':
             return self.list_search(self.params.get('type'), **self.params)
+
+        if self.params.get('query') and not self.params.get('tmdb_id'):
+            self.params['tmdb_id'] = TMDb().get_tmdb_id(self.params.get('type'), **self.params)
+
+        if info == 'details':
+            return self.list_details(self.params.get('type'), **self.params)
         if info in constants.TMDB_BASIC_LISTS:
             return self.list_tmdb(self.params.get('type'), **self.params)
         return self.list_basedir(info)

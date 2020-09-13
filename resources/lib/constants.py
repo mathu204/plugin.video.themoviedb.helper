@@ -12,48 +12,35 @@ LANGUAGES = [
     'zh-TW', 'zu-ZA']
 
 TMDB_BASIC_LISTS = {
-    'search': {
-        'path': 'search/{type}',
-        'key': 'results',
-        'url_info': 'details',
-        'item_tmdbtype': '{type}'},
     'popular': {
         'path': '{type}/popular',
-        'key': 'results',
-        'url_info': 'details',
-        'item_tmdbtype': '{type}'},
+        'key': 'results'},
     'top_rated': {
         'path': '{type}/top_rated',
-        'key': 'results',
-        'url_info': 'details',
-        'item_tmdbtype': '{type}'},
+        'key': 'results'},
     'upcoming': {
         'path': '{type}/upcoming',
-        'key': 'results',
-        'url_info': 'details',
-        'item_tmdbtype': '{type}'},
+        'key': 'results'},
     'trending_day': {
         'path': 'trending/{type}/day',
-        'key': 'results',
-        'url_info': 'details',
-        'item_tmdbtype': '{type}'},
+        'key': 'results'},
     'trending_week': {
         'path': 'trending/{type}/week',
-        'key': 'results',
-        'url_info': 'details',
-        'item_tmdbtype': '{type}'},
+        'key': 'results'},
     'now_playing': {
         'path': '{type}/now_playing',
-        'key': 'results',
-        'url_info': 'details',
-        'item_tmdbtype': '{type}'},
+        'key': 'results'},
     'airing_today': {
         'path': '{type}/airing_today',
-        'key': 'results',
-        'url_info': 'details',
-        'item_tmdbtype': '{type}'},
+        'key': 'results'},
     'on_the_air': {
         'path': '{type}/on_the_air',
+        'key': 'results'},
+    'recommendations': {
+        'path': '{type}/{tmdb_id}/recommendations',
         'key': 'results',
-        'url_info': 'details',
-        'item_tmdbtype': '{type}'}}
+        'dbid_sorting': True},
+    'similar': {
+        'path': '{type}/{tmdb_id}/similar',
+        'key': 'results',
+        'dbid_sorting': True}}
