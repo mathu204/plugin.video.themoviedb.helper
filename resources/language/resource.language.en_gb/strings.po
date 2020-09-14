@@ -1066,6 +1066,31 @@ msgctxt "#32211"
 msgid "Your Lists"
 msgstr ""
 
+#: /resources/lib/traktapi.py
+msgctxt "#32212"
+msgid "Trakt user account logout"
+msgstr ""
+
+#: /resources/lib/traktapi.py
+msgctxt "#32213"
+msgid "Do you wish to logout of your Trakt account?"
+msgstr ""
+
+#: /resources/lib/traktapi.py
+msgctxt "#32214"
+msgid "Trakt access token not found"
+msgstr ""
+
+#: /resources/lib/traktapi.py
+msgctxt "#32215"
+msgid "Logout failed!"
+msgstr ""
+
+#: /resources/lib/traktapi.py
+msgctxt "#32216"
+msgid "Successfully logged out of Trakt user account"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""
