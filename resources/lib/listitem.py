@@ -7,8 +7,9 @@ from resources.lib.tmdb import TMDb
 
 class ListItem(object):
     def __init__(
-            self, label=None, label2=None, path=None, library=None, is_folder=True, params=None, next_page=None, parent_params=None,
-            infolabels=None, infoproperties=None, art=None, cast=None, context_menu=None, stream_details=None, unique_ids=None,
+            self, label=None, label2=None, path=None, library=None, is_folder=True, params=None, next_page=None,
+            parent_params=None, kodi_db=None, infolabels=None, infoproperties=None, art=None, cast=None,
+            context_menu=None, stream_details=None, unique_ids=None,
             **kwargs):
         self.label = label or ''
         self.label2 = label2 or ''
@@ -24,6 +25,7 @@ class ListItem(object):
         self.context_menu = context_menu or []
         self.stream_details = stream_details or {}
         self.unique_ids = unique_ids or {}
+        self.kodi_db = kodi_db
         self.set_as_next_page(next_page)
 
     def set_as_next_page(self, next_page=None):
@@ -44,6 +46,20 @@ class ListItem(object):
         if not self.art.get('fanart'):
             self.art['fanart'] = '{}/fanart.jpg'.format(ADDONPATH)
         return self.art
+
+    def get_kodi_dbid(self):
+        if not self.kodi_db:
+            return
+        dbid = self.kodi_db.get_info(
+            info='dbid',
+            imdb_id=self.unique_ids.get('imdb'),
+            tmdb_id=self.unique_ids.get('tmdb'),
+            tvdb_id=self.unique_ids.get('tvdb'),
+            originaltitle=self.infolabels.get('originaltitle'),
+            title=self.infolabels.get('title'),
+            year=self.infolabels.get('year'))
+        if dbid:
+            self.infolabels['dbid'] = dbid
 
     def get_details(self, cache_only=True):
         tmdb_type = self.infoproperties.get('tmdb_type')

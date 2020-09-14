@@ -130,3 +130,15 @@ def merge_two_dicts_deep(x, y):
         elif v:
             z[k] = v
     return z
+
+
+def del_empty_keys(d, values=[]):
+    my_dict = d.copy()
+    for k, v in d.items():
+        if not v or v in values:
+            del my_dict[k]
+    return my_dict
+
+
+def find_dict_in_list(list_of_dicts, key, value):
+    return [list_index for list_index, dic in enumerate(list_of_dicts) if dic.get(key) == value]

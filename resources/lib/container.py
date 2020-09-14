@@ -6,6 +6,7 @@ import resources.lib.utils as utils
 import resources.lib.cache as cache
 import resources.lib.plugin as plugin
 import resources.lib.constants as constants
+import resources.lib.rpc as rpc
 from resources.lib.listitem import ListItem
 from resources.lib.tmdb import TMDb
 from resources.lib.plugin import ADDONPATH, ADDON, PLUGINPATH
@@ -22,15 +23,17 @@ class Container(object):
         self.container_content = ''
         self.container_update = None
         self.container_refresh = False
+        self.kodi_db = None
 
-    def add_items(self, items=None, allow_pagination=True, parent_params=None):
+    def add_items(self, items=None, allow_pagination=True, parent_params=None, kodi_db=None):
         if not items:
             return
         for i in items:
             if not allow_pagination and 'next_page' in i:
                 continue
-            listitem = ListItem(parent_params=parent_params, **i)
+            listitem = ListItem(parent_params=parent_params, kodi_db=kodi_db, **i)
             listitem.get_details()
+            listitem.get_kodi_dbid()
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
                 url=listitem.get_url(),
@@ -41,6 +44,12 @@ class Container(object):
         xbmcplugin.setPluginCategory(self.handle, plugin_category)  # Container.PluginCategory
         xbmcplugin.setContent(self.handle, container_content)  # Container.Content
         xbmcplugin.endOfDirectory(self.handle, updateListing=update_listing)
+
+    def get_kodi_database(self, tmdb_type):
+        if tmdb_type == 'movie':
+            return rpc.KodiLibrary(dbtype='movie')
+        if tmdb_type == 'tv':
+            return rpc.KodiLibrary(dbtype='tvshow')
 
     def list_details(self, tmdb_type, tmdb_id=None, **kwargs):
         base_item = TMDb().get_details(tmdb_type, tmdb_id)
@@ -92,6 +101,7 @@ class Container(object):
 
         self.update_listing = True if update_listing else False
         self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
+        self.kodi_db = self.get_kodi_database(tmdb_type)
         items = TMDb().get_search_list(
             tmdb_type=tmdb_type, query=query, page=page,
             year=kwargs.get('year'),
@@ -118,6 +128,7 @@ class Container(object):
             tmdb_type=tmdb_type,
             key=info_model.get('key', 'results'),
             page=page)
+        self.kodi_db = self.get_kodi_database(tmdb_type)
         self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
         return items
 
@@ -143,7 +154,7 @@ class Container(object):
         items = self.get_items_router(**self.params)
         if not items:
             return
-        self.add_items(items, allow_pagination=self.allow_pagination, parent_params=self.params)
+        self.add_items(items, allow_pagination=self.allow_pagination, parent_params=self.params, kodi_db=self.kodi_db)
         self.finish_container(
             update_listing=self.update_listing,
             plugin_category=self.plugin_category,
