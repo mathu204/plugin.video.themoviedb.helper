@@ -88,16 +88,17 @@ def get_directory(url):
     return response.get('result', {}).get('files', [{}]) or [{}]
 
 
-def _get_infolabels(item, key):
+def _get_infolabels(item, key, dbid):
     infolabels = {}
-    infolabels['genre'] = item.get('genre', [])
-    infolabels['country'] = item.get('country', [])
+    infolabels['dbid'] = dbid
+    infolabels['genre'] = item.get('genre') or []
+    infolabels['country'] = item.get('country') or []
     infolabels['episode'] = item.get('episode')
     infolabels['season'] = item.get('season')
     infolabels['sortepisode'] = item.get('sortepisode')
     infolabels['sortseason'] = item.get('sortseason')
     infolabels['episodeguide'] = item.get('episodeguide')
-    infolabels['showlink'] = item.get('showlink', [])
+    infolabels['showlink'] = item.get('showlink') or []
     infolabels['top250'] = item.get('top250')
     infolabels['setid'] = item.get('setid')
     infolabels['tracknumber'] = item.get('tracknumber')
@@ -106,7 +107,7 @@ def _get_infolabels(item, key):
     infolabels['watched'] = item.get('watched')
     infolabels['playcount'] = utils.try_parse_int(item.get('playcount'))
     infolabels['overlay'] = item.get('overlay')
-    infolabels['director'] = item.get('director', [])
+    infolabels['director'] = item.get('director') or []
     infolabels['mpaa'] = item.get('mpaa')
     infolabels['plot'] = item.get('plot')
     infolabels['plotoutline'] = item.get('plotoutline')
@@ -114,22 +115,23 @@ def _get_infolabels(item, key):
     infolabels['originaltitle'] = item.get('originaltitle')
     infolabels['sorttitle'] = item.get('sorttitle')
     infolabels['duration'] = item.get('duration')
-    infolabels['studio'] = item.get('studio', [])
+    infolabels['studio'] = item.get('studio') or []
     infolabels['tagline'] = item.get('tagline')
-    infolabels['writer'] = item.get('writer', [])
+    infolabels['writer'] = item.get('writer') or []
     infolabels['tvshowtitle'] = item.get('tvshowtitle')
     infolabels['premiered'] = item.get('premiered')
+    infolabels['year'] = item.get('premiered', '')[:4]
     infolabels['status'] = item.get('status')
     infolabels['set'] = item.get('set')
     infolabels['setoverview'] = item.get('setoverview')
-    infolabels['tag'] = item.get('tag', [])
+    infolabels['tag'] = item.get('tag') or []
     infolabels['imdbnumber'] = item.get('imdbnumber')
     infolabels['code'] = item.get('code')
     infolabels['aired'] = item.get('aired')
     infolabels['credits'] = item.get('credits')
     infolabels['lastplayed'] = item.get('lastplayed')
     infolabels['album'] = item.get('album')
-    infolabels['artist'] = item.get('artist', [])
+    infolabels['artist'] = item.get('artist') or []
     infolabels['votes'] = item.get('votes')
     infolabels['path'] = item.get('file')
     infolabels['trailer'] = item.get('trailer')
@@ -151,25 +153,15 @@ def _get_infoproperties(item):
     return infoproperties
 
 
-def _get_niceitem(item, key):
-    label = item.get('label') or ''
-    icon = item.get('thumbnail') or ''
-    thumb = item.get('art', {}).get('thumb') or ''
-    poster = item.get('art', {}).get('poster') or ''
-    fanart = item.get('fanart') or item.get('art', {}).get('fanart') or ''
-    landscape = item.get('art', {}).get('landscape') or ''
-    clearlogo = item.get('art', {}).get('clearlogo') or ''
-    clearart = item.get('art', {}).get('clearart') or ''
-    discart = item.get('art', {}).get('discart') or ''
-    cast = item.get('cast', [])
-    path = item.get('file') or ''
-    streamdetails = item.get('streamdetails', {})
-    infolabels = _get_infolabels(item, key)
-    infoproperties = _get_infoproperties(item)
-    return {
-        'label': label, 'icon': icon, 'poster': poster, 'thumb': thumb, 'fanart': fanart, 'landscape': landscape,
-        'clearlogo': clearlogo, 'clearart': clearart, 'discart': discart, 'cast': cast, 'infolabels': infolabels,
-        'infoproperties': infoproperties, 'streamdetails': streamdetails, 'path': path}
+def _get_niceitem(item, key, dbid):
+    nice_item = {
+        'label': item.get('label') or '',
+        'art': item.get('art') or {},
+        'cast': item.get('cast') or [],
+        'stream_details': item.get('streamdetails') or {},
+        'infolabels': _get_infolabels(item, key, dbid),
+        'infoproperties': _get_infoproperties(item)}
+    return nice_item
 
 
 def _get_item_details(dbid=None, method=None, key=None, properties=None):
@@ -183,10 +175,10 @@ def _get_item_details(dbid=None, method=None, key=None, properties=None):
     if not details or not isinstance(details, dict):
         return {}
     details = details.get('result', {}).get('{0}details'.format(key))
-    return _get_niceitem(details, key)
+    return _get_niceitem(details, key, dbid)
 
 
-def get_movie_details(self, dbid=None):
+def get_movie_details(dbid=None):
     properties = [
         "title", "genre", "year", "rating", "director", "trailer", "tagline", "plot", "plotoutline", "originaltitle",
         "lastplayed", "playcount", "writer", "studio", "mpaa", "cast", "country", "imdbnumber", "runtime", "set",
@@ -195,7 +187,7 @@ def get_movie_details(self, dbid=None):
     return _get_item_details(dbid=dbid, method="VideoLibrary.GetMovieDetails", key="movie", properties=properties)
 
 
-def get_tvshow_details(self, dbid=None):
+def get_tvshow_details(dbid=None):
     properties = [
         "title", "genre", "year", "rating", "plot", "studio", "mpaa", "cast", "playcount", "episode", "imdbnumber",
         "premiered", "votes", "lastplayed", "fanart", "thumbnail", "file", "originaltitle", "sorttitle", "episodeguide",
@@ -203,7 +195,7 @@ def get_tvshow_details(self, dbid=None):
     return _get_item_details(dbid=dbid, method="VideoLibrary.GetTVShowDetails", key="tvshow", properties=properties)
 
 
-def get_episode_details(self, dbid=None):
+def get_episode_details(dbid=None):
     properties = [
         "title", "plot", "votes", "rating", "writer", "firstaired", "playcount", "runtime", "director", "productioncode",
         "season", "episode", "originaltitle", "showtitle", "cast", "streamdetails", "lastplayed", "fanart", "thumbnail",

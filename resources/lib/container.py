@@ -31,9 +31,9 @@ class Container(object):
         for i in items:
             if not allow_pagination and 'next_page' in i:
                 continue
-            listitem = ListItem(parent_params=parent_params, kodi_db=kodi_db, **i)
-            listitem.get_details()
-            listitem.get_kodi_dbid()
+            listitem = ListItem(parent_params=parent_params, **i)
+            listitem.set_details(details=listitem.get_tmdb_details(cache_only=True))
+            listitem.set_details(details=listitem.get_kodi_details(dbid=listitem.get_kodi_dbid(kodi_db=kodi_db)), reverse=True)  # Merge kodi details last and reverse order of dictionary merge so that kodi library details always come first
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
                 url=listitem.get_url(),
@@ -58,14 +58,13 @@ class Container(object):
         self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
         return items
 
-    def list_searchdir_clear(self, tmdb_type):
+    def list_searchdir_router(self, tmdb_type, **kwargs):
+        if kwargs.get('clear_cache') != 'True':
+            return self.list_searchdir(tmdb_type, **kwargs)
         cache.set_search_history(tmdb_type, clear_cache=True)
         self.container_refresh = True
 
-    def list_searchdir(self, tmdb_type, clear_cache=False, **kwargs):
-        if clear_cache:
-            return self.list_searchdir_clear(tmdb_type)
-
+    def list_searchdir(self, tmdb_type, **kwargs):
         base_item = {
             'label': '{} {}'.format(xbmc.getLocalizedString(137), plugin.convert_type(tmdb_type, plugin.TYPE_PLURAL)),
             'art': {'thumb': '{}/resources/icons/tmdb/search.png'.format(ADDONPATH)},
@@ -99,9 +98,6 @@ class Container(object):
         if not query:
             return
 
-        self.update_listing = True if update_listing else False
-        self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
-        self.kodi_db = self.get_kodi_database(tmdb_type)
         items = TMDb().get_search_list(
             tmdb_type=tmdb_type, query=query, page=page,
             year=kwargs.get('year'),
@@ -115,6 +111,10 @@ class Container(object):
             self.container_update = '{}?{}'.format(PLUGINPATH, utils.urlencode_params(**params))
             # Trigger container update using new path with query after adding items
             # Prevents onback from re-prompting for user input by re-writing path
+
+        self.update_listing = True if update_listing else False
+        self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
+        self.kodi_db = self.get_kodi_database(tmdb_type)
 
         return items
 
@@ -137,7 +137,7 @@ class Container(object):
         if info == 'pass':
             return
         if info == 'dir_search':
-            return self.list_searchdir(kwargs.get('type'), **kwargs)
+            return self.list_searchdir_router(kwargs.get('type'), **kwargs)
         if info == 'search':
             return self.list_search(kwargs.get('type'), **kwargs)
 

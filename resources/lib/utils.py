@@ -115,9 +115,11 @@ def dict_to_list(items, key):
     return [i.get(key) for i in items if i.get(key)]
 
 
-def merge_two_dicts(x, y):
-    z = x.copy()   # start with x's keys and values
-    z.update(y)    # modifies z with y's keys and values & returns None
+def merge_two_dicts(x, y, reverse=False):
+    xx = y if reverse else x
+    yy = x if reverse else y
+    z = xx.copy()   # start with x's keys and values
+    z.update(yy)    # modifies z with y's keys and values & returns None
     return z
 
 

@@ -1,6 +1,7 @@
 import xbmc
 import xbmcgui
 import resources.lib.utils as utils
+import resources.lib.rpc as rpc
 from resources.lib.plugin import ADDONPATH, PLUGINPATH
 from resources.lib.tmdb import TMDb
 
@@ -8,7 +9,7 @@ from resources.lib.tmdb import TMDb
 class ListItem(object):
     def __init__(
             self, label=None, label2=None, path=None, library=None, is_folder=True, params=None, next_page=None,
-            parent_params=None, kodi_db=None, infolabels=None, infoproperties=None, art=None, cast=None,
+            parent_params=None, infolabels=None, infoproperties=None, art=None, cast=None,
             context_menu=None, stream_details=None, unique_ids=None,
             **kwargs):
         self.label = label or ''
@@ -25,7 +26,6 @@ class ListItem(object):
         self.context_menu = context_menu or []
         self.stream_details = stream_details or {}
         self.unique_ids = unique_ids or {}
-        self.kodi_db = kodi_db
         self.set_as_next_page(next_page)
 
     def set_as_next_page(self, next_page=None):
@@ -47,10 +47,10 @@ class ListItem(object):
             self.art['fanart'] = '{}/fanart.jpg'.format(ADDONPATH)
         return self.art
 
-    def get_kodi_dbid(self):
-        if not self.kodi_db:
+    def get_kodi_dbid(self, kodi_db=None):
+        if not kodi_db:
             return
-        dbid = self.kodi_db.get_info(
+        dbid = kodi_db.get_info(
             info='dbid',
             imdb_id=self.unique_ids.get('imdb'),
             tmdb_id=self.unique_ids.get('tmdb'),
@@ -58,20 +58,33 @@ class ListItem(object):
             originaltitle=self.infolabels.get('originaltitle'),
             title=self.infolabels.get('title'),
             year=self.infolabels.get('year'))
-        if dbid:
-            self.infolabels['dbid'] = dbid
+        return dbid
 
-    def get_details(self, cache_only=True):
+    def get_kodi_details(self, dbid=None):
+        if not dbid:
+            return
+        if self.infolabels.get('mediatype') == 'movie':
+            return rpc.get_movie_details(dbid)
+        elif self.infolabels.get('mediatype') == 'tv':
+            return rpc.get_tvshow_details(dbid)
+        # TODO: Add episode details need to also merge TV
+        # elif self.infolabels.get('mediatype') == 'episode':
+        #     return rpc.get_tvshow_details(dbid)
+
+    def get_tmdb_details(self, cache_only=True):
         tmdb_type = self.infoproperties.get('tmdb_type')
         tmdb_id = self.infoproperties.get('tmdb_id')
         if not tmdb_type or not tmdb_id:
             return
-        details = TMDb().get_details(tmdb_type, tmdb_id, cache_only=cache_only)
+        return TMDb().get_details(tmdb_type, tmdb_id, cache_only=cache_only)
+
+    def set_details(self, details=None, reverse=False):
         if not details:
             return
-        self.infolabels = utils.merge_two_dicts(details.get('infolabels', {}), self.infolabels)
-        self.infoproperties = utils.merge_two_dicts(details.get('infoproperties', {}), self.infoproperties)
-        self.art = utils.merge_two_dicts(details.get('art', {}), self.art)
+        self.stream_details = utils.merge_two_dicts(details.get('streamdetails', {}), self.stream_details, reverse=reverse)
+        self.infolabels = utils.merge_two_dicts(details.get('infolabels', {}), self.infolabels, reverse=reverse)
+        self.infoproperties = utils.merge_two_dicts(details.get('infoproperties', {}), self.infoproperties, reverse=reverse)
+        self.art = utils.merge_two_dicts(details.get('art', {}), self.art, reverse=reverse)
         self.cast = self.cast or details.get('cast', [])
 
     def get_url(self):
