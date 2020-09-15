@@ -126,6 +126,8 @@ class TMDb(RequestAPI):
         infoproperties = infoproperties or {}
         infoproperties['tmdb_type'] = tmdb_type
         infoproperties['tmdb_id'] = item.get('id')
+        infoproperties['imdb_id'] = item.get('imdb_id') or item.get('external_ids', {}).get('imdb_id')
+        infoproperties['tvdb_id'] = item.get('external_ids', {}).get('tvdb_id')
         return infoproperties
 
     def set_basic_art(self, item, art=None):
@@ -138,6 +140,8 @@ class TMDb(RequestAPI):
     def set_unique_ids(self, item, unique_ids=None):
         unique_ids = unique_ids or {}
         unique_ids['tmdb'] = item.get('id')
+        unique_ids['imdb'] = item.get('imdb_id') or item.get('external_ids', {}).get('imdb_id')
+        unique_ids['tvdb'] = item.get('external_ids', {}).get('tvdb_id')
         return unique_ids
 
     def set_basic_params(self, item, tmdb_type, params=None):

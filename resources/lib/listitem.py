@@ -4,6 +4,7 @@ import resources.lib.utils as utils
 import resources.lib.rpc as rpc
 from resources.lib.plugin import ADDONPATH, PLUGINPATH
 from resources.lib.tmdb import TMDb
+from resources.lib.fanarttv import FanartTV
 
 
 class ListItem(object):
@@ -47,6 +48,56 @@ class ListItem(object):
             self.art['fanart'] = '{}/fanart.jpg'.format(ADDONPATH)
         return self.art
 
+    def set_art_from_fanarttv(self):
+        if self.infolabels.get('mediatype') not in ['movie', 'tvshow', 'season', 'episode']:
+            return
+        if self.infolabels.get('mediatype') == 'movie':
+            self.art = utils.merge_two_dicts(FanartTV().get_movie_allart(self.unique_ids.get('tmdb')), self.art)
+        elif self.infolabels.get('mediatype') == ['tvshow', 'season', 'episode']:
+            self.art = utils.merge_two_dicts(FanartTV().get_tvshow_allart(self.unique_ids.get('tvdb')), self.art)
+        return self.art
+
+    def set_watched_from_trakt(self, sync_watched=None):
+        if not sync_watched:
+            return
+
+        if self.infolabels.get('mediatype') not in ['movie', 'tvshow', 'season', 'episode']:
+            return
+
+        tmdb_id = self.unique_ids.get('tmdb')
+        if self.infolabels.get('mediatype') in ['season', 'episode']:
+            tmdb_id = self.infoproperties.get('tvshow.tmdb_id')
+
+        sync_item = sync_watched.get(tmdb_id)
+        if not sync_item:
+            return
+
+        if self.infolabels.get('mediatype') == 'movie':
+            self.infolabels['playcount'] = utils.try_parse_int(sync_item.get('plays') or 1)
+            self.infolabels['overlay'] = 5
+            return
+
+        if self.infolabels.get('mediatype') == 'tv':
+            return  # TODO: Get tvshow watched count
+
+        season = utils.try_parse_int(self.infolabels.get('season'))
+        if not season:
+            return
+        if self.infolabels.get('mediatype') == 'season':
+            return  # TODO: Get season watched count
+
+        episode = utils.try_parse_int(self.infolabels.get('episode'))
+        if not episode:
+            return
+        if self.infolabels.get('mediatype') == 'episode':
+            for i in sync_item.get('seasons', []):
+                if i.get('number', -1) == season:
+                    for j in i.get('episodes', []):
+                        if j.get('number', -1) == episode:
+                            self.infolabels['playcount'] = utils.try_parse_int(j.get('plays') or 1)
+                            self.infolabels['overlay'] = 5
+                            return
+
     def get_kodi_dbid(self, kodi_db=None):
         if not kodi_db:
             return
@@ -60,7 +111,7 @@ class ListItem(object):
             year=self.infolabels.get('year'))
         return dbid
 
-    def get_kodi_details(self, dbid=None):
+    def _get_kodi_details(self, dbid=None):
         if not dbid:
             return
         if self.infolabels.get('mediatype') == 'movie':
@@ -71,12 +122,28 @@ class ListItem(object):
         # elif self.infolabels.get('mediatype') == 'episode':
         #     return rpc.get_tvshow_details(dbid)
 
-    def get_tmdb_details(self, cache_only=True):
-        tmdb_type = self.infoproperties.get('tmdb_type')
-        tmdb_id = self.infoproperties.get('tmdb_id')
+    def set_kodi_details(self, kodi_db=None, reverse=True):
+        self.set_details(details=self._get_kodi_details(dbid=self.get_kodi_dbid(kodi_db=kodi_db)), reverse=reverse)
+
+    def _convert_mediatype_to_tmdb(self, simplify_tv=True):
+        if self.infolabels.get('mediatype') == 'movie':
+            return 'movie'
+        if self.infolabels.get('mediatype') == 'tvshow':
+            return 'tv'
+        if self.infolabels.get('mediatype') == 'season':
+            return 'tv' if simplify_tv else 'season'
+        if self.infolabels.get('mediatype') == 'episode':
+            return 'tv' if simplify_tv else 'episode'
+
+    def _get_tmdb_details(self, cache_only=True):
+        tmdb_type = self._convert_mediatype_to_tmdb()
+        tmdb_id = self.unique_ids.get('tmdb')
         if not tmdb_type or not tmdb_id:
             return
         return TMDb().get_details(tmdb_type, tmdb_id, cache_only=cache_only)
+
+    def set_tmdb_details(self):
+        self.set_details(details=self._get_tmdb_details(cache_only=True))
 
     def set_details(self, details=None, reverse=False):
         if not details:
@@ -85,6 +152,7 @@ class ListItem(object):
         self.infolabels = utils.merge_two_dicts(details.get('infolabels', {}), self.infolabels, reverse=reverse)
         self.infoproperties = utils.merge_two_dicts(details.get('infoproperties', {}), self.infoproperties, reverse=reverse)
         self.art = utils.merge_two_dicts(details.get('art', {}), self.art, reverse=reverse)
+        self.unique_ids = utils.merge_two_dicts(details.get('unique_ids', {}), self.unique_ids, reverse=reverse)
         self.cast = self.cast or details.get('cast', [])
 
     def get_url(self):

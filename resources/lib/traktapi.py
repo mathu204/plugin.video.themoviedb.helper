@@ -16,8 +16,6 @@ CLIENT_SECRET = '15119384341d9a61c751d8d515acbc0dd801001d4ebe85d3eef9885df80ee4d
 class TraktAPI(RequestAPI):
     def __init__(
             self,
-            force=False,
-            login=False,
             cache_short=ADDON.getSettingInt('cache_list_days'),
             cache_long=ADDON.getSettingInt('cache_details_days')):
         super(TraktAPI, self).__init__(
@@ -31,17 +29,14 @@ class TraktAPI(RequestAPI):
         self.prev_activities = None
         self.refresh_check = 0
         self.attempted_login = False
-        self.dialog_noapikey_header = u'{0} {1} {2}'.format(self.addon.getLocalizedString(32007), self.req_api_name, self.addon.getLocalizedString(32011))
-        self.dialog_noapikey_text = self.addon.getLocalizedString(32012)
+        self.dialog_noapikey_header = u'{0} {1} {2}'.format(ADDON.getLocalizedString(32007), self.req_api_name, ADDON.getLocalizedString(32011))
+        self.dialog_noapikey_text = ADDON.getLocalizedString(32012)
         self.client_id = CLIENT_ID
         self.client_secret = CLIENT_SECRET
         self.headers = {'trakt-api-version': '2', 'trakt-api-key': self.client_id, 'Content-Type': 'application/json'}
-
-        if force:
-            self.login()
-            return
-
-        self.authorize(login)
+        self.last_activities = {}
+        self.sync_activities = {}
+        self.authorize()
 
     def authorize(self, login=False):
         if self.authorization:
@@ -64,7 +59,7 @@ class TraktAPI(RequestAPI):
 
     def get_stored_token(self):
         try:
-            token = loads(self.addon.getSettingString('trakt_token')) or {}
+            token = loads(ADDON.getSettingString('trakt_token')) or {}
         except Exception as exc:
             token = {}
             utils.kodi_log(exc, 1)
@@ -83,7 +78,7 @@ class TraktAPI(RequestAPI):
                 'client_secret': self.client_secret})
             if response and response.status_code == 200:
                 msg = ADDON.getLocalizedString(32216)
-                self.addon.setSettingString('trakt_token', '')
+                ADDON.setSettingString('trakt_token', '')
             else:
                 msg = ADDON.getLocalizedString(32215)
         else:
@@ -100,9 +95,9 @@ class TraktAPI(RequestAPI):
         self.expires_in = self.code.get('expires_in', 0)
         self.auth_dialog = xbmcgui.DialogProgress()
         self.auth_dialog.create(
-            self.addon.getLocalizedString(32097),
-            self.addon.getLocalizedString(32096),
-            self.addon.getLocalizedString(32095) + ': [B]' + self.code.get('user_code') + '[/B]')
+            ADDON.getLocalizedString(32097),
+            ADDON.getLocalizedString(32096),
+            ADDON.getLocalizedString(32095) + ': [B]' + self.code.get('user_code') + '[/B]')
         self.poller()
 
     def refresh_token(self):
@@ -149,7 +144,7 @@ class TraktAPI(RequestAPI):
     def on_authenticated(self, auth_dialog=True):
         """Triggered when device authentication has been completed"""
         utils.kodi_log(u'Trakt Authenticated Successfully!', 1)
-        self.addon.setSettingString('trakt_token', dumps(self.authorization))
+        ADDON.setSettingString('trakt_token', dumps(self.authorization))
         self.headers['Authorization'] = 'Bearer {0}'.format(self.authorization.get('access_token'))
         if auth_dialog:
             self.auth_dialog.close()
@@ -212,7 +207,9 @@ class TraktAPI(RequestAPI):
     def get_imdb_top250(self):
         return cache.use_cache(self.get_itemlist_ranked, 'users', 'nielsz', 'lists', 'active-imdb-top-250', 'items')
 
-    def get_itemlist_sorted_cached(self, *args, page=1, limit=20, **kwargs):
+    def get_itemlist_sorted_cached(self, *args, **kwargs):
+        page = kwargs.get('page') or 1
+        limit = kwargs.get('limit') or 20
         cache_refresh = True if page == 1 else False
         kwparams = {
             'cache_name': 'trakt.sortedlist.v4_0_0',
@@ -225,3 +222,97 @@ class TraktAPI(RequestAPI):
         index_a = index_z - limit
         index_z = len(items) if len(items) < index_z else index_z
         return {'items': items[index_a:index_z], 'pagecount': -(-len(items) // limit)}
+
+    """
+    ACTIVITY SYNCING
+    trakt_type: activity_type
+    movies: watched_at, collected_at, rated_at, watchlisted_at, recommendations_at, commented_at, paused_at, hidden_at
+    episodes: watched_at, collected_at, rated_at, watchlisted_at, commented_at, paused_at
+    shows: rated_at, watchlisted_at, recommendations_at, commented_at, hidden_at
+    seasons: rated_at, watchlisted_at, commented_at, hidden_at
+    comments: liked_at
+    lists: liked_at, updated_at, commented_at
+    watchlist: updated_at
+    recommendations: updated_at
+    account: settings_at
+    """
+
+    def _get_activity(self, activities, trakt_type=None, activity_type=None):
+        if not activities:
+            return
+        if not trakt_type:
+            return activities.get('all', '')
+        if not activity_type:
+            return activities.get('{}s'.format(trakt_type), {})
+        return activities.get('{}s'.format(trakt_type), {}).get(activity_type)
+
+    def _set_activity(self, timestamp, trakt_type=None, activity_type=None):
+        if not timestamp:
+            return
+        activities = cache.get_cache('sync_activity') or {}
+        activities['all'] = timestamp
+        if trakt_type and activity_type:
+            activities['{}s'.format(trakt_type)] = activities.get('{}s'.format(trakt_type)) or {}
+            activities['{}s'.format(trakt_type)][activity_type] = timestamp
+        if not activities:
+            return
+        return cache.set_cache(activities, cache_name='sync_activity', cache_days=30)
+
+    def _get_last_activity(self, trakt_type=None, activity_type=None):
+        if not self.authorize():
+            return
+        if not self.last_activities:
+            self.last_activities = self.get_request('sync/last_activities', cache_days=0.0007)  # Cache for approx 1 minute to prevent rapid recalls
+        return self._get_activity(self.last_activities, trakt_type=trakt_type, activity_type=activity_type)
+
+    def _get_sync_activity(self, trakt_type=None, activity_type=None):
+        if not self.sync_activities:
+            self.sync_activities = cache.get_cache('sync_activity')
+        if not self.sync_activities:
+            return
+        return self._get_activity(self.sync_activities, trakt_type=trakt_type, activity_type=activity_type)
+
+    def _get_sync_refresh_status(self, trakt_type=None, activity_type=None):
+        last_activity = self._get_last_activity(trakt_type, activity_type)
+        sync_activity = self._get_sync_activity(trakt_type, activity_type) if last_activity else None
+        if not sync_activity or sync_activity != last_activity:
+            return last_activity
+
+    def _get_quick_list(self, response=None, trakt_type=None):
+        if response and trakt_type:
+            return {i.get(trakt_type, {}).get('ids', {}).get('tmdb'): i for i in response if i.get(trakt_type, {}).get('ids', {}).get('tmdb')}
+
+    def _get_sync_list(self, path=None, trakt_type=None, activity_type=None, permissions=['movie', 'show'], quick_list=False):
+        if not self.authorize():
+            return
+        if not trakt_type or not activity_type or not path:
+            return
+        if permissions and trakt_type not in permissions:
+            return
+        last_activity = self._get_sync_refresh_status(trakt_type, activity_type)
+        cache_refresh = True if last_activity else False
+        response = self.get_request_lc(path, cache_refresh=cache_refresh)
+        if not response:
+            return
+        if last_activity:
+            self._set_activity(last_activity, trakt_type=trakt_type, activity_type=activity_type)
+        if not quick_list:
+            return response
+        return cache.use_cache(
+            self._get_quick_list, response, trakt_type,
+            cache_name='quick_list.{}'.format(path),
+            cache_refresh=cache_refresh)
+
+    def get_sync_watched(self, trakt_type, quick_list=False):
+        return self._get_sync_list(
+            path='sync/watched/{}s'.format(trakt_type),
+            trakt_type=trakt_type,
+            activity_type='watched_at',
+            quick_list=quick_list)
+
+    def get_sync_collection(self, trakt_type, quick_list=False):
+        return self._get_sync_list(
+            path='sync/collection/{}s'.format(trakt_type),
+            trakt_type=trakt_type,
+            activity_type='collected_at',
+            quick_list=quick_list)

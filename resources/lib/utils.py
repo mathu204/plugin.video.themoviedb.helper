@@ -116,8 +116,8 @@ def dict_to_list(items, key):
 
 
 def merge_two_dicts(x, y, reverse=False):
-    xx = y if reverse else x
-    yy = x if reverse else y
+    xx = y or {} if reverse else x or {}
+    yy = x or {} if reverse else y or {}
     z = xx.copy()   # start with x's keys and values
     z.update(yy)    # modifies z with y's keys and values & returns None
     return z

@@ -14,6 +14,7 @@ class RequestAPI(object):
         self.req_connect_err = utils.try_parse_float(xbmcgui.Window(10000).getProperty(self.req_connect_err_prop)) or 0
         self.cache_long = 14 if not cache_long or cache_long < 14 else cache_long
         self.cache_short = 1 if not cache_short or cache_short < 1 else cache_short
+        self.headers = None
 
     def translate_xml(self, request):
         if request:
@@ -23,7 +24,7 @@ class RequestAPI(object):
 
     def get_api_request_json(self, request=None, postdata=None, headers=None):
         request = self.get_api_request(request=request, postdata=postdata, headers=headers)
-        return request.json() if request else None
+        return request.json() if request else {}
 
     def get_api_request(self, request=None, postdata=None, headers=None):
         """
@@ -63,7 +64,7 @@ class RequestAPI(object):
             if arg:  # Don't add empty args
                 request = u'{0}/{1}'.format(request, arg)
         sep = '?' if '?' not in request else '&'
-        request = u'{0}{1}{2}'.format(request, sep, self.req_api_key)
+        request = u'{0}{1}{2}'.format(request, sep, self.req_api_key) if self.req_api_key else request
         for key, value in kwargs.items():
             if value:  # Don't add empty kwargs
                 sep = '?' if '?' not in request else ''
@@ -82,14 +83,20 @@ class RequestAPI(object):
 
     def get_request(self, *args, **kwargs):
         """ Get API request from cache (or online if no cached version) """
-        cache_days = kwargs.pop('cache_days', self.cache_long)
+        cache_days = kwargs.pop('cache_days', 0)
         cache_name = kwargs.pop('cache_name', '')
         cache_only = kwargs.pop('cache_only', False)
+        cache_force = kwargs.pop('cache_force', False)
         cache_refresh = kwargs.pop('cache_refresh', False)
+        headers = kwargs.pop('headers', None) or self.headers
+        postdata = kwargs.pop('postdata', None)
         request_url = self.get_request_url(*args, **kwargs)
         return cache.use_cache(
             self.get_api_request_json, request_url,
+            headers=headers,
+            postdata=postdata,
             cache_refresh=cache_refresh,
             cache_days=cache_days,
             cache_name=cache_name,
-            cache_only=cache_only)
+            cache_only=cache_only,
+            cache_force=cache_force)

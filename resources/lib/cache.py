@@ -12,7 +12,11 @@ def get_cache(cache_name):
 
 def set_cache(my_object, cache_name, cache_days=14, force=False):
     cache_name = cache_name or ''
-    if force or (my_object and cache_name and cache_days):
+    if my_object and cache_name and cache_days:
+        _cache.set('{}.{}'.format(_cache_name, cache_name), my_object, expiration=datetime.timedelta(days=cache_days))
+    elif force:
+        my_object = my_object or {'not_null': 'not_null'}
+        cache_days = force if isinstance(force, int) else cache_days
         _cache.set('{}.{}'.format(_cache_name, cache_name), my_object, expiration=datetime.timedelta(days=cache_days))
     return my_object
 
@@ -25,6 +29,7 @@ def use_cache(func, *args, **kwargs):
     cache_days = kwargs.pop('cache_days', 14)
     cache_name = kwargs.pop('cache_name', '') or ''
     cache_only = kwargs.pop('cache_only', False)
+    cache_force = kwargs.pop('cache_force', False)
     cache_refresh = kwargs.pop('cache_refresh', False)
     if not cache_name:
         for arg in args:
@@ -38,7 +43,7 @@ def use_cache(func, *args, **kwargs):
         return my_cache
     elif not cache_only:
         my_object = func(*args, **kwargs)
-        return set_cache(my_object, cache_name, cache_days)
+        return set_cache(my_object, cache_name, cache_days, force=cache_force)
 
 
 def get_search_history(tmdb_type=None):

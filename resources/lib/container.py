@@ -9,6 +9,7 @@ import resources.lib.constants as constants
 import resources.lib.rpc as rpc
 from resources.lib.listitem import ListItem
 from resources.lib.tmdb import TMDb
+from resources.lib.traktapi import TraktAPI
 from resources.lib.plugin import ADDONPATH, ADDON, PLUGINPATH
 
 
@@ -28,12 +29,15 @@ class Container(object):
     def add_items(self, items=None, allow_pagination=True, parent_params=None, kodi_db=None):
         if not items:
             return
+        sync_watched = self.get_trakt_sync_watched(self.container_content)
         for i in items:
             if not allow_pagination and 'next_page' in i:
                 continue
             listitem = ListItem(parent_params=parent_params, **i)
-            listitem.set_details(details=listitem.get_tmdb_details(cache_only=True))
-            listitem.set_details(details=listitem.get_kodi_details(dbid=listitem.get_kodi_dbid(kodi_db=kodi_db)), reverse=True)  # Merge kodi details last and reverse order of dictionary merge so that kodi library details always come first
+            listitem.set_tmdb_details()
+            listitem.set_kodi_details(kodi_db=self.kodi_db, reverse=True)  # Merge kodi details last with reversed dictionary merge to preference library details
+            listitem.set_watched_from_trakt(sync_watched)
+            listitem.set_art_from_fanarttv()
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
                 url=listitem.get_url(),
@@ -44,6 +48,13 @@ class Container(object):
         xbmcplugin.setPluginCategory(self.handle, plugin_category)  # Container.PluginCategory
         xbmcplugin.setContent(self.handle, container_content)  # Container.Content
         xbmcplugin.endOfDirectory(self.handle, updateListing=update_listing)
+
+    def get_trakt_sync_watched(self, container_content):
+        if container_content == 'movies':
+            return TraktAPI().get_sync_watched('movie', quick_list=True) or {}
+        if container_content in ['tvshows', 'seasons', 'episodes']:
+            return TraktAPI().get_sync_watched('show', quick_list=True) or {}
+        return {}
 
     def get_kodi_database(self, tmdb_type):
         if tmdb_type == 'movie':
