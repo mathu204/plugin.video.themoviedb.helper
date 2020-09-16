@@ -1091,6 +1091,16 @@ msgctxt "#32216"
 msgid "Successfully logged out of Trakt user account"
 msgstr ""
 
+#: /resources/lib/script.py
+msgctxt "#32217"
+msgid "No artwork found for {} ID {}"
+msgstr ""
+
+#: /resources/lib/script.py
+msgctxt "#32218"
+msgid "Artwork found for {} ID {}\n{}"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""

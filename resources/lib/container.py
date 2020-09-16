@@ -10,6 +10,7 @@ import resources.lib.rpc as rpc
 from resources.lib.listitem import ListItem
 from resources.lib.tmdb import TMDb
 from resources.lib.traktapi import TraktAPI
+from resources.lib.fanarttv import FanartTV
 from resources.lib.plugin import ADDONPATH, ADDON, PLUGINPATH
 
 
@@ -25,6 +26,9 @@ class Container(object):
         self.container_update = None
         self.container_refresh = False
         self.kodi_db = None
+        self.ftv_lookup = ADDON.getSettingBool('fanarttv_lookup')
+        self.ftv_widget_lookup = ADDON.getSettingBool('widget_fanarttv_lookup')
+        self.is_widget = True if self.params.get('widget') else False
 
     def add_items(self, items=None, allow_pagination=True, parent_params=None, kodi_db=None):
         if not items:
@@ -34,10 +38,11 @@ class Container(object):
             if not allow_pagination and 'next_page' in i:
                 continue
             listitem = ListItem(parent_params=parent_params, **i)
-            listitem.set_tmdb_details()
+            listitem.set_tmdb_details(TMDb())
             listitem.set_kodi_details(kodi_db=self.kodi_db, reverse=True)  # Merge kodi details last with reversed dictionary merge to preference library details
             listitem.set_watched_from_trakt(sync_watched)
-            listitem.set_art_from_fanarttv()
+            listitem.set_art_from_fanarttv(FanartTV(cache_only=self.ftv_is_cache_only(is_widget=self.is_widget)))
+            listitem.set_standard_context_menu()
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
                 url=listitem.get_url(),
@@ -48,6 +53,13 @@ class Container(object):
         xbmcplugin.setPluginCategory(self.handle, plugin_category)  # Container.PluginCategory
         xbmcplugin.setContent(self.handle, container_content)  # Container.Content
         xbmcplugin.endOfDirectory(self.handle, updateListing=update_listing)
+
+    def ftv_is_cache_only(self, is_widget=False):
+        if is_widget and self.ftv_widget_lookup:
+            return False
+        if not is_widget and self.ftv_lookup:
+            return False
+        return True
 
     def get_trakt_sync_watched(self, container_content):
         if container_content == 'movies':

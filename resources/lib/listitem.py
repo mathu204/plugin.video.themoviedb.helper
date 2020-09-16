@@ -3,8 +3,6 @@ import xbmcgui
 import resources.lib.utils as utils
 import resources.lib.rpc as rpc
 from resources.lib.plugin import ADDONPATH, PLUGINPATH
-from resources.lib.tmdb import TMDb
-from resources.lib.fanarttv import FanartTV
 
 
 class ListItem(object):
@@ -48,14 +46,34 @@ class ListItem(object):
             self.art['fanart'] = '{}/fanart.jpg'.format(ADDONPATH)
         return self.art
 
-    def set_art_from_fanarttv(self):
+    def set_art_from_fanarttv(self, fanarttv_api):
         if self.infolabels.get('mediatype') not in ['movie', 'tvshow', 'season', 'episode']:
             return
         if self.infolabels.get('mediatype') == 'movie':
-            self.art = utils.merge_two_dicts(FanartTV().get_movie_allart(self.unique_ids.get('tmdb')), self.art)
+            self.art = utils.merge_two_dicts(
+                self.art, fanarttv_api.get_movie_allart(self.unique_ids.get('tmdb')))
         elif self.infolabels.get('mediatype') == ['tvshow', 'season', 'episode']:
-            self.art = utils.merge_two_dicts(FanartTV().get_tvshow_allart(self.unique_ids.get('tvdb')), self.art)
+            self.art = utils.merge_two_dicts(
+                self.art, fanarttv_api.get_tv_allart(self.unique_ids.get('tvdb')))
         return self.art
+
+    def _context_item_get_ftv_artwork(self):
+        tmdb_type, uid = None, None
+        if self.infolabels.get('mediatype') == 'movie':
+            tmdb_type = 'movie'
+            uid = self.unique_ids.get('tmdb')
+        elif self.infolabels.get('mediatype') in ['tvshow', 'season', 'episode']:
+            tmdb_type = 'tv'
+            uid = self.unique_ids.get('tvdb')
+        if tmdb_type and uid:
+            return [(
+                'Manage artwork',
+                'RunScript(plugin.video.themoviedb.helper,ftv_{}_artwork={})'.format(tmdb_type, uid))]
+        return []
+
+    def set_standard_context_menu(self):
+        self.context_menu += self._context_item_get_ftv_artwork()
+        return self.context_menu
 
     def set_watched_from_trakt(self, sync_watched=None):
         if not sync_watched:
@@ -135,15 +153,11 @@ class ListItem(object):
         if self.infolabels.get('mediatype') == 'episode':
             return 'tv' if simplify_tv else 'episode'
 
-    def _get_tmdb_details(self, cache_only=True):
-        tmdb_type = self._convert_mediatype_to_tmdb()
-        tmdb_id = self.unique_ids.get('tmdb')
-        if not tmdb_type or not tmdb_id:
-            return
-        return TMDb().get_details(tmdb_type, tmdb_id, cache_only=cache_only)
+    def _get_tmdb_details(self, tmdb_api, cache_only=True):
+        return tmdb_api.get_details(self._convert_mediatype_to_tmdb(), self.unique_ids.get('tmdb'), cache_only=cache_only)
 
-    def set_tmdb_details(self):
-        self.set_details(details=self._get_tmdb_details(cache_only=True))
+    def set_tmdb_details(self, tmdb_api):
+        self.set_details(details=self._get_tmdb_details(tmdb_api, cache_only=True))
 
     def set_details(self, details=None, reverse=False):
         if not details:

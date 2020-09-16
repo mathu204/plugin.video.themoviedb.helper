@@ -3,6 +3,7 @@ import xbmc
 import time
 from copy import copy
 from resources.lib.plugin import ADDON
+from contextlib import contextmanager
 try:
     from urllib.parse import urlencode, unquote_plus  # Py3
 except ImportError:
@@ -11,6 +12,15 @@ except ImportError:
 
 _addonlogname = '[plugin.video.themoviedb.helper]\n'
 _debuglogging = ADDON.getSettingBool('debug_logging')
+
+
+@contextmanager
+def busy_dialog():
+    xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
+    try:
+        yield
+    finally:
+        xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
 
 
 def kodi_log(value, level=0):

@@ -212,7 +212,7 @@ class TraktAPI(RequestAPI):
         limit = kwargs.get('limit') or 20
         cache_refresh = True if page == 1 else False
         kwparams = {
-            'cache_name': 'trakt.sortedlist.v4_0_0',
+            'cache_name': 'trakt.sortedlist',
             'cache_days': 0.125,
             'cache_refresh': cache_refresh,
             'sortmethod': kwargs.pop('sortmethod', None),
