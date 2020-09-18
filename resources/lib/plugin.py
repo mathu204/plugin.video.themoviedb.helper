@@ -136,7 +136,7 @@ def get_basedir_list(item_type=None, trakt=False, tmdb=False):
             item = i.copy()
             item['label'] = i.get('label', '').format(space=space, item_type=plural)
             item['params'] = i.get('params', {}).copy()
-            item['params']['type'] = itype
+            item['params']['tmdb_type'] = itype
             item.pop('types', None)
             items.append(item)
 

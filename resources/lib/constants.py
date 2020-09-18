@@ -13,34 +13,34 @@ LANGUAGES = [
 
 TMDB_BASIC_LISTS = {
     'popular': {
-        'path': '{type}/popular',
+        'path': '{tmdb_type}/popular',
         'key': 'results'},
     'top_rated': {
-        'path': '{type}/top_rated',
+        'path': '{tmdb_type}/top_rated',
         'key': 'results'},
     'upcoming': {
-        'path': '{type}/upcoming',
+        'path': '{tmdb_type}/upcoming',
         'key': 'results'},
     'trending_day': {
-        'path': 'trending/{type}/day',
+        'path': 'trending/{tmdb_type}/day',
         'key': 'results'},
     'trending_week': {
-        'path': 'trending/{type}/week',
+        'path': 'trending/{tmdb_type}/week',
         'key': 'results'},
     'now_playing': {
-        'path': '{type}/now_playing',
+        'path': '{tmdb_type}/now_playing',
         'key': 'results'},
     'airing_today': {
-        'path': '{type}/airing_today',
+        'path': '{tmdb_type}/airing_today',
         'key': 'results'},
     'on_the_air': {
-        'path': '{type}/on_the_air',
+        'path': '{tmdb_type}/on_the_air',
         'key': 'results'},
     'recommendations': {
-        'path': '{type}/{tmdb_id}/recommendations',
+        'path': '{tmdb_type}/{tmdb_id}/recommendations',
         'key': 'results',
         'dbid_sorting': True},
     'similar': {
-        'path': '{type}/{tmdb_id}/similar',
+        'path': '{tmdb_type}/{tmdb_id}/similar',
         'key': 'results',
         'dbid_sorting': True}}

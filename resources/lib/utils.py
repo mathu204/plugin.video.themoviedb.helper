@@ -133,12 +133,14 @@ def merge_two_dicts(x, y, reverse=False):
     return z
 
 
-def merge_two_dicts_deep(x, y):
+def merge_two_dicts_deep(x, y, reverse=False):
     """ Deep merge y keys into copy of x """
-    z = x.copy()
-    for k, v in y.items():
+    xx = y or {} if reverse else x or {}
+    yy = x or {} if reverse else y or {}
+    z = xx.copy()
+    for k, v in yy.items():
         if isinstance(v, dict):
-            merge_two_dicts_deep(z.setdefault(k, {}), v)
+            merge_two_dicts_deep(z.setdefault(k, {}), v, reverse=reverse)
         elif v:
             z[k] = v
     return z

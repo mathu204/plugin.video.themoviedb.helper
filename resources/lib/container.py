@@ -30,6 +30,13 @@ class Container(object):
         self.ftv_widget_lookup = ADDON.getSettingBool('widget_fanarttv_lookup')
         self.is_widget = True if self.params.get('widget') else False
 
+        # Legacy code clean-up for back compatibility
+        # TODO: Maybe only necessary for player code??
+        if self.params.get('type'):
+            self.params['tmdb_type'] = self.params.pop('type')
+        if self.params.get('tmdb_type') in ['season', 'episode']:
+            self.params['tmdb_type'] = 'tv'
+
     def add_items(self, items=None, allow_pagination=True, parent_params=None, kodi_db=None):
         if not items:
             return
@@ -40,6 +47,7 @@ class Container(object):
         for i in items:
             if not allow_pagination and 'next_page' in i:
                 continue
+            # TODO: Filter out unaired items
             listitem = ListItem(parent_params=parent_params, **i)
             listitem.set_details(details=listitem_utils.get_tmdb_details(listitem))  # Quick because only get cached
             listitem.set_details(details=listitem_utils.get_ftv_details(listitem), reverse=True)  # Slow when not cache only
@@ -78,10 +86,24 @@ class Container(object):
             return plugin.convert_type('season', plugin.TYPE_CONTAINER)
         return plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
 
-    def list_details(self, tmdb_type, tmdb_id=None, season=None, episode=None, **kwargs):
+    def list_details(self, tmdb_type, tmdb_id, season=None, episode=None, **kwargs):
         base_item = TMDb().get_details(tmdb_type, tmdb_id, season, episode)
         base_item.setdefault('params', {})
-        base_item['params']['info']
+
+        if tmdb_type == 'movie':
+            base_item['params']['info'] = 'play'
+        elif tmdb_type == 'tv' and season is not None and episode is not None:
+            base_item['params']['info'] = 'play'
+            base_item['params']['season'] = season
+            base_item['params']['episode'] = episode
+        elif tmdb_type == 'tv' and season is not None:
+            base_item['params']['info'] = 'episodes'
+            base_item['params']['season'] = season
+        elif tmdb_type == 'tv':
+            base_item['params']['info'] = 'seasons'
+        else:
+            base_item['params']['info'] = 'details'
+
         items = [base_item]
         self.container_content = self.get_container_content(tmdb_type, season, episode)
         return items
@@ -134,7 +156,7 @@ class Container(object):
 
         if not original_query:
             params = utils.merge_two_dicts(kwargs, {
-                'info': 'search', 'type': tmdb_type, 'page': page, 'query': query,
+                'info': 'search', 'tmdb_type': tmdb_type, 'page': page, 'query': query,
                 'update_listing': 'True'})
             self.container_update = '{}?{}'.format(PLUGINPATH, utils.urlencode_params(**params))
             # Trigger container update using new path with query after adding items
@@ -149,10 +171,10 @@ class Container(object):
     def list_basedir(self, info=None):
         return plugin.get_basedir_items(info)
 
-    def list_tmdb(self, tmdb_type, info=None, tmdb_id=None, page=None, **kwargs):
+    def list_tmdb(self, info, tmdb_type, tmdb_id=None, page=None, **kwargs):
         info_model = constants.TMDB_BASIC_LISTS.get(info)
         items = TMDb().get_basic_list(
-            path=info_model.get('path', '').format(type=tmdb_type, tmdb_id=tmdb_id),
+            path=info_model.get('path', '').format(tmdb_type=tmdb_type, tmdb_id=tmdb_id, **kwargs),
             tmdb_type=tmdb_type,
             key=info_model.get('key', 'results'),
             page=page)
@@ -160,22 +182,30 @@ class Container(object):
         self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
         return items
 
+    def list_seasons(self, tmdb_id, **kwargs):
+        items = TMDb().get_seasons(tmdb_id)
+        self.kodi_db = self.get_kodi_database('tv')
+        self.container_content = plugin.convert_type('season', plugin.TYPE_CONTAINER)
+        return items
+
     def get_items_router(self, **kwargs):
         info = kwargs.get('info')
         if info == 'pass':
             return
         if info == 'dir_search':
-            return self.list_searchdir_router(kwargs.get('type'), **kwargs)
+            return self.list_searchdir_router(**kwargs)
         if info == 'search':
-            return self.list_search(kwargs.get('type'), **kwargs)
+            return self.list_search(**kwargs)
 
         if kwargs.get('query') and not kwargs.get('tmdb_id'):
-            kwargs['tmdb_id'] = TMDb().get_tmdb_id(kwargs.get('type'), **kwargs)
+            kwargs['tmdb_id'] = TMDb().get_tmdb_id(**kwargs)
 
         if info == 'details':
-            return self.list_details(kwargs.get('type'), **kwargs)
+            return self.list_details(**kwargs)
+        if info == 'seasons':
+            return self.list_seasons(**kwargs)
         if info in constants.TMDB_BASIC_LISTS:
-            return self.list_tmdb(kwargs.get('type'), **kwargs)
+            return self.list_tmdb(**kwargs)
         return self.list_basedir(info)
 
     def get_directory(self):

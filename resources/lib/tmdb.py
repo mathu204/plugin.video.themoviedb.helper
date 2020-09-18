@@ -108,11 +108,30 @@ class TMDb(RequestAPI):
         genre_ids = genre_ids or []
         return [self.get_genre_by_id(genre_id) for genre_id in genre_ids if self.get_genre_by_id(genre_id)]
 
-    def set_basic_infolabels(self, item, tmdb_type, infolabels=None):
+    def get_episode_infolabel(self, item):
+        if item.get('episode_number'):
+            return item.get('episode_number')
+        if item.get('episode_count'):
+            return item.get('episode_count')
+        if item.get('seasons'):
+            count = 0
+            for i in item.get('seasons', []):
+                count += utils.try_parse_int(i.get('episode_count', 0))
+            return count
+
+    def get_season_infolabel(self, item):
+        if item.get('season_number'):
+            return item.get('season_number')
+        if item.get('season_count'):
+            return item.get('season_count')
+        if isinstance(item.get('seasons'), list):
+            return len(item.get('seasons'))
+
+    def get_basic_infolabels(self, item, item_type, infolabels=None):
         infolabels = infolabels or {}
         infolabels['title'] = self.get_title(item)
         infolabels['originaltitle'] = item.get('original_title')
-        infolabels['mediatype'] = plugin.convert_type(tmdb_type, plugin.TYPE_DB)
+        infolabels['mediatype'] = plugin.convert_type(item_type, plugin.TYPE_DB)
         infolabels['rating'] = '{:0,.1f}'.format(utils.try_parse_float(item.get('vote_average')))
         infolabels['votes'] = '{:0,.0f}'.format(item.get('vote_count')) if item.get('vote_count') else None
         infolabels['plot'] = item.get('overview') or item.get('biography') or item.get('content')
@@ -120,56 +139,50 @@ class TMDb(RequestAPI):
         infolabels['year'] = infolabels.get('premiered')[:4]
         infolabels['genre'] = self.get_genres_by_id(item.get('genre_ids'))
         infolabels['country'] = item.get('origin_country')
-        return infolabels
+        infolabels['season'] = self.get_season_infolabel(item)
+        infolabels['episode'] = self.get_episode_infolabel(item)
+        return utils.del_empty_keys(infolabels, ['N/A', '0.0', '0'])
 
-    def set_basic_infoproperties(self, item, tmdb_type, infoproperties=None):
+    def get_basic_infoproperties(self, item, tmdb_type, infoproperties=None):
         infoproperties = infoproperties or {}
         infoproperties['tmdb_type'] = tmdb_type
         infoproperties['tmdb_id'] = item.get('id')
         infoproperties['imdb_id'] = item.get('imdb_id') or item.get('external_ids', {}).get('imdb_id')
         infoproperties['tvdb_id'] = item.get('external_ids', {}).get('tvdb_id')
-        return infoproperties
+        return utils.del_empty_keys(infoproperties, ['N/A', '0.0', '0'])
 
-    def set_basic_art(self, item, art=None):
+    def get_basic_art(self, item, art=None):
         art = art or {}
         art['thumb'] = self.get_icon(item)
         art['poster'] = self.get_poster(item)
         art['fanart'] = self.get_fanart(item)
-        return art
+        return utils.del_empty_keys(art, ['N/A', '0.0', '0'])
 
-    def set_unique_ids(self, item, unique_ids=None):
+    def get_unique_ids(self, item, unique_ids=None):
         unique_ids = unique_ids or {}
         unique_ids['tmdb'] = item.get('id')
         unique_ids['imdb'] = item.get('imdb_id') or item.get('external_ids', {}).get('imdb_id')
         unique_ids['tvdb'] = item.get('external_ids', {}).get('tvdb_id')
-        return unique_ids
+        return utils.del_empty_keys(unique_ids, ['N/A', '0.0', '0'])
 
-    def set_basic_params(self, item, tmdb_type, params=None):
+    def get_basic_params(self, item, tmdb_type, params=None):
         params = params or {}
         params['info'] = 'details'
-        params['type'] = tmdb_type
+        params['tmdb_type'] = tmdb_type
         params['tmdb_id'] = item.get('id')
-        return params
+        return utils.del_empty_keys(params, ['N/A', '0.0', '0'])
 
-    def set_basic_info(self, item, tmdb_type, base_item=None):
+    def get_basic_info(self, item, tmdb_type, base_item=None):
         base_item = base_item or {}
         if item and tmdb_type:
             base_item['label'] = self.get_title(item)
-            base_item['art'] = self.set_basic_art(item)
-            base_item['infolabels'] = self.set_basic_infolabels(item, tmdb_type)
-            base_item['infoproperties'] = self.set_basic_infoproperties(item, tmdb_type)
-            base_item['unique_ids'] = self.set_unique_ids(item)
-            base_item['params'] = self.set_basic_params(item, tmdb_type)
+            base_item['art'] = self.get_basic_art(item)
+            base_item['infolabels'] = self.get_basic_infolabels(item, tmdb_type)
+            base_item['infoproperties'] = self.get_basic_infoproperties(item, tmdb_type)
+            base_item['unique_ids'] = self.get_unique_ids(item)
+            base_item['params'] = self.get_basic_params(item, tmdb_type)
             base_item['path'] = PLUGINPATH
         return base_item
-
-    def get_basic_list(self, path, tmdb_type, key='results', **kwargs):
-        response = self.get_request_sc(path, **kwargs)
-        results = response.get(key, []) if response else []
-        items = [self.set_basic_info(i, tmdb_type) for i in results if i]
-        if utils.try_parse_int(response.get('page', 0)) < utils.try_parse_int(response.get('total_pages', 0)):
-            items.append({'next_page': utils.try_parse_int(response.get('page', 0)) + 1})
-        return items
 
     def get_trailer(self, item):
         if not isinstance(item, dict):
@@ -195,7 +208,7 @@ class TMDb(RequestAPI):
         if item.get('belongs_to_collection', {}) and item.get('belongs_to_collection', {}).get('name'):
             return item.get('belongs_to_collection', {}).get('name')
 
-    def set_detailed_infolabels(self, item, tmdb_type, infolabels=None):
+    def get_detailed_infolabels(self, item, tmdb_type, infolabels=None):
         infolabels = infolabels or {}
         infolabels['set'] = self.get_collection_name(item)
         infolabels['genre'] = utils.dict_to_list(item.get('genres', []), 'name')
@@ -209,43 +222,80 @@ class TMDb(RequestAPI):
         infolabels['writer'] = [i.get('name') for i in item.get('credits', {}).get('crew', []) if i.get('name') and i.get('department') == 'Writing']
         infolabels['trailer'] = self.get_trailer(item)
         infolabels['mpaa'] = self.get_mpaa_rating(item)
-        return infolabels
+        return utils.del_empty_keys(infolabels, ['N/A', '0.0', '0'])
 
-    def set_detailed_info(self, item, tmdb_type, base_item=None):
+    def get_detailed_info(self, item, tmdb_type, base_item=None):
         base_item = base_item or {}
         if item and tmdb_type:
-            base_item = self.set_basic_info(item, tmdb_type, base_item)
-            base_item['infolabels'] = self.set_detailed_infolabels(item, tmdb_type, base_item.get('infolabels', {}))
+            base_item = self.get_basic_info(item, tmdb_type, base_item)
+            base_item['infolabels'] = self.get_detailed_infolabels(item, tmdb_type, base_item.get('infolabels', {}))
         return base_item
 
-    def set_details(self, item, tmdb_type):
-        details = self.set_detailed_info(item, tmdb_type)
-        return details
+    def _get_details(self, tmdb_type, tmdb_id, season=None, episode=None, cache_only=False, cache_refresh=False):
+        path_affix = []
+        if season is not None:
+            path_affix += ['season', season]
+        if season is not None and episode is not None:
+            path_affix += ['episode', episode]
+        return self.get_request_lc(
+            tmdb_type, tmdb_id, *path_affix,
+            append_to_response=self.append_to_response,
+            cache_only=cache_only, cache_refresh=cache_refresh) or {}
 
     def get_details(self, tmdb_type, tmdb_id, season=None, episode=None, cache_only=False, cache_refresh=False):
         if not tmdb_id or not tmdb_type:
             return
-
-        if season and episode:
-            path_affix = ['season', season, 'episode', episode]
-        elif season:
-            path_affix = ['season', season]
-        else:
-            path_affix = []
-
-        details = self.get_request_lc(
-            tmdb_type, tmdb_id, *path_affix,
-            append_to_response=self.append_to_response,
-            cache_only=cache_only, cache_refresh=cache_refresh)
-        return cache.use_cache(
-            self.set_details, item=details, tmdb_type=tmdb_type,
-            cache_name='detailed.item.{}.{}'.format(tmdb_type, tmdb_id),
+        details = cache.use_cache(
+            self.get_detailed_info,
+            item=self._get_details(tmdb_type, tmdb_id, cache_only=cache_only, cache_refresh=cache_refresh),
+            tmdb_type=tmdb_type,
+            cache_name='detailed.item.{}.{}.{}.{}'.format(tmdb_type, tmdb_id, None, None),
             cache_days=self.cache_long, cache_only=cache_only, cache_refresh=cache_refresh)
+        if not details:
+            return
+        title = details.get('infolabels', {}).get('title')
+        if season is not None:
+            item = cache.use_cache(
+                self.get_detailed_info,
+                item=self._get_details(tmdb_type, tmdb_id, season, episode, cache_only, cache_refresh),
+                tmdb_type='season' if episode is None else 'episode', base_item=details,
+                cache_name='detailed.item.{}.{}.{}.{}'.format(tmdb_type, tmdb_id, season, episode),
+                cache_days=self.cache_long, cache_only=cache_only, cache_refresh=cache_refresh)
+            item['infolabels']['tvshowtitle'] = title
+            item['unique_ids']['tmdb'] = tmdb_id
+            item['params']['tmdb_id'] = tmdb_id
+            item['params']['season'] = season
+            item['params']['episode'] = episode
+            return item
+        return details
+
+    def get_seasons(self, tmdb_id):
+        request = self.get_request_sc('tv/{}'.format(tmdb_id))
+        results = request.get('seasons', []) if request else []
+        details = self.get_detailed_info(request, 'tv')
+        items = []
+        items_end = []
+        for i in results:
+            item = self.get_detailed_info(i, 'season', self.get_detailed_info(request, 'tv'))
+            item['infolabels']['tvshowtitle'] = details.get('infolabels', {}).get('title')
+            item['unique_ids']['tmdb'] = tmdb_id
+            item['params']['tmdb_id'] = tmdb_id
+            item['params']['season'] = i.get('season_number')
+            items.append(item) if i.get('season_number') != 0 else items_end.append(item)
+        return items + items_end
 
     def get_search_list(self, tmdb_type, **kwargs):
         """ standard kwargs: query= page= """
         kwargs['key'] = 'results'
         return self.get_basic_list('search/{}'.format(tmdb_type), tmdb_type, **kwargs)
+
+    def get_basic_list(self, path, tmdb_type, key='results', **kwargs):
+        response = self.get_request_sc(path, **kwargs)
+        results = response.get(key, []) if response else []
+        items = [self.get_basic_info(i, tmdb_type) for i in results if i]
+        if utils.try_parse_int(response.get('page', 0)) < utils.try_parse_int(response.get('total_pages', 0)):
+            items.append({'next_page': utils.try_parse_int(response.get('page', 0)) + 1})
+        return items
 
     def get_request_sc(self, *args, **kwargs):
         """ Get API request using the short cache """
