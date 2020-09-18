@@ -71,11 +71,19 @@ class Container(object):
         if tmdb_type == 'tv':
             return rpc.KodiLibrary(dbtype='tvshow')
 
-    def list_details(self, tmdb_type, tmdb_id=None, **kwargs):
-        base_item = TMDb().get_details(tmdb_type, tmdb_id)
-        items = []
-        items.append(base_item)
-        self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
+    def get_container_content(self, tmdb_type, season=None, episode=None):
+        if tmdb_type == 'tv' and season and episode:
+            return plugin.convert_type('episode', plugin.TYPE_CONTAINER)
+        elif tmdb_type == 'tv' and season:
+            return plugin.convert_type('season', plugin.TYPE_CONTAINER)
+        return plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
+
+    def list_details(self, tmdb_type, tmdb_id=None, season=None, episode=None, **kwargs):
+        base_item = TMDb().get_details(tmdb_type, tmdb_id, season, episode)
+        base_item.setdefault('params', {})
+        base_item['params']['info']
+        items = [base_item]
+        self.container_content = self.get_container_content(tmdb_type, season, episode)
         return items
 
     def list_searchdir_router(self, tmdb_type, **kwargs):
