@@ -164,7 +164,7 @@ class TMDb(RequestAPI):
         return base_item
 
     def get_basic_list(self, path, tmdb_type, key='results', **kwargs):
-        response = self.request_list(path, **kwargs)
+        response = self.get_request_sc(path, **kwargs)
         results = response.get(key, []) if response else []
         items = [self.set_basic_info(i, tmdb_type) for i in results if i]
         if utils.try_parse_int(response.get('page', 0)) < utils.try_parse_int(response.get('total_pages', 0)):
@@ -222,11 +222,19 @@ class TMDb(RequestAPI):
         details = self.set_detailed_info(item, tmdb_type)
         return details
 
-    def get_details(self, tmdb_type, tmdb_id, cache_only=False, cache_refresh=False):
+    def get_details(self, tmdb_type, tmdb_id, season=None, episode=None, cache_only=False, cache_refresh=False):
         if not tmdb_id or not tmdb_type:
             return
-        details = self.request_details(
-            tmdb_type, tmdb_id,
+
+        if season and episode:
+            path_affix = ['season', season, 'episode', episode]
+        elif season:
+            path_affix = ['season', season]
+        else:
+            path_affix = []
+
+        details = self.get_request_lc(
+            tmdb_type, tmdb_id, *path_affix,
             append_to_response=self.append_to_response,
             cache_only=cache_only, cache_refresh=cache_refresh)
         return cache.use_cache(
@@ -239,12 +247,16 @@ class TMDb(RequestAPI):
         kwargs['key'] = 'results'
         return self.get_basic_list('search/{}'.format(tmdb_type), tmdb_type, **kwargs)
 
-    def request_list(self, *args, **kwargs):
+    def get_request_sc(self, *args, **kwargs):
+        """ Get API request using the short cache """
+        kwargs['cache_days'] = self.cache_short
         kwargs['region'] = self.iso_country
         kwargs['language'] = self.req_language
-        return self.get_request_sc(*args, **kwargs)
+        return self.get_request(*args, **kwargs)
 
-    def request_details(self, *args, **kwargs):
+    def get_request_lc(self, *args, **kwargs):
+        """ Get API request using the long cache """
+        kwargs['cache_days'] = self.cache_long
         kwargs['region'] = self.iso_country
         kwargs['language'] = self.req_language
-        return self.get_request_lc(*args, **kwargs)
+        return self.get_request(*args, **kwargs)

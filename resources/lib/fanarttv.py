@@ -15,7 +15,7 @@ ARTWORK_TYPES = {
         'clearlogo': ['hdmovielogo', 'movielogo'],
         'discart': ['moviedisc'],
         'poster': ['movieposter'],
-        'fanart': ['moviebackground '],
+        'fanart': ['moviebackground'],
         'landscape': ['moviethumb'],
         'banner': ['moviebanner']},
     'tv': {
@@ -23,7 +23,7 @@ ARTWORK_TYPES = {
         'clearlogo': ['hdtvlogo', 'clearlogo'],
         'characterart': ['characterart'],
         'poster': ['tvposter'],
-        'fanart': ['showbackground '],
+        'fanart': ['showbackground'],
         'landscape': ['tvthumb'],
         'banner': ['tvbanner']}}
 
@@ -76,7 +76,8 @@ class FanartTV(RequestAPI):
         return cache.use_cache(
             self._get_artwork_type, ftv_id, ftv_type, artwork_type,
             cache_name='fanart_tv.type.{}.{}.{}.{}'.format(self.language, ftv_id, ftv_type, artwork_type),
-            cache_only=self.cache_only)
+            cache_only=self.cache_only,
+            cache_refresh=self.cache_refresh)
 
     def _get_best_artwork(self, ftv_id, ftv_type, artwork_type):
         artwork = self.get_artwork_type(ftv_id, ftv_type, artwork_type)
@@ -94,33 +95,34 @@ class FanartTV(RequestAPI):
         return cache.use_cache(
             self._get_best_artwork, ftv_id, ftv_type, artwork_type,
             cache_name='fanart_tv.best.{}.{}.{}.{}'.format(self.language, ftv_id, ftv_type, artwork_type),
-            cache_only=self.cache_only)
+            cache_only=self.cache_only,
+            cache_refresh=self.cache_refresh)
 
     def _get_artwork_func(self, ftv_id, ftv_type, artwork_type, get_list=False):
         func = self.get_best_artwork if not get_list else self.get_artwork_type
         return func(ftv_id, ftv_type, artwork_type)
 
-    def get_movie_clearart(self, ftv_id, get_list=False):
+    def get_movies_clearart(self, ftv_id, get_list=False):
         artwork = self._get_artwork_func(ftv_id, 'movies', 'hdmovieclearart', get_list=get_list)
         return artwork or self._get_artwork_func(ftv_id, 'movies', 'movieclearart', get_list=get_list)
 
-    def get_movie_clearlogo(self, ftv_id, get_list=False):
+    def get_movies_clearlogo(self, ftv_id, get_list=False):
         artwork = self._get_artwork_func(ftv_id, 'movies', 'hdmovielogo', get_list=get_list)
         return artwork or self._get_artwork_func(ftv_id, 'movies', 'movielogo', get_list=get_list)
 
-    def get_movie_discart(self, ftv_id, get_list=False):
+    def get_movies_discart(self, ftv_id, get_list=False):
         return self._get_artwork_func(ftv_id, 'movies', 'moviedisc', get_list=get_list)
 
-    def get_movie_poster(self, ftv_id, get_list=False):
+    def get_movies_poster(self, ftv_id, get_list=False):
         return self._get_artwork_func(ftv_id, 'movies', 'movieposter', get_list=get_list)
 
-    def get_movie_fanart(self, ftv_id, get_list=False):
+    def get_movies_fanart(self, ftv_id, get_list=False):
         return self._get_artwork_func(ftv_id, 'movies', 'moviebackground', get_list=get_list)
 
-    def get_movie_landscape(self, ftv_id, get_list=False):
+    def get_movies_landscape(self, ftv_id, get_list=False):
         return self._get_artwork_func(ftv_id, 'movies', 'moviethumb', get_list=get_list)
 
-    def get_movie_banner(self, ftv_id, get_list=False):
+    def get_movies_banner(self, ftv_id, get_list=False):
         return self._get_artwork_func(ftv_id, 'movies', 'moviebanner', get_list=get_list)
 
     def get_tv_clearart(self, ftv_id, get_list=False):
@@ -146,139 +148,114 @@ class FanartTV(RequestAPI):
     def get_tv_characterart(self, ftv_id, get_list=False):
         return self._get_artwork_func(ftv_id, 'tv', 'characterart', get_list=get_list)
 
-    def get_tv_allart(self, ftv_id):
+    def get_tv_all_artwork(self, ftv_id):
         if self.get_artwork_request(ftv_id, 'tv'):  # Check we can get the request first so we don't re-ask eight times if it 404s
-            return {
+            return utils.del_empty_keys({
                 'clearart': self.get_tv_clearart(ftv_id),
                 'clearlogo': self.get_tv_clearlogo(ftv_id),
                 'banner': self.get_tv_banner(ftv_id),
                 'landscape': self.get_tv_landscape(ftv_id),
                 'fanart': self.get_tv_fanart(ftv_id),
                 'characterart': self.get_tv_characterart(ftv_id),
-                'poster': self.get_tv_poster(ftv_id)}
+                'poster': self.get_tv_poster(ftv_id)})
 
-    def get_movie_allart(self, ftv_id):
+    def get_movies_all_artwork(self, ftv_id):
         if self.get_artwork_request(ftv_id, 'movies'):  # Check we can get the request first so we don't re-ask eight times if it 404s
-            return {
-                'clearart': self.get_movie_clearart(ftv_id),
-                'clearlogo': self.get_movie_clearlogo(ftv_id),
-                'banner': self.get_movie_banner(ftv_id),
-                'landscape': self.get_movie_landscape(ftv_id),
-                'fanart': self.get_movie_fanart(ftv_id),
-                'poster': self.get_movie_poster(ftv_id),
-                'discart': self.get_movie_discart(ftv_id)}
+            return utils.del_empty_keys({
+                'clearart': self.get_movies_clearart(ftv_id),
+                'clearlogo': self.get_movies_clearlogo(ftv_id),
+                'banner': self.get_movies_banner(ftv_id),
+                'landscape': self.get_movies_landscape(ftv_id),
+                'fanart': self.get_movies_fanart(ftv_id),
+                'poster': self.get_movies_poster(ftv_id),
+                'discart': self.get_movies_discart(ftv_id)})
 
-    # def get_tv_allart(self, ftv_id):
-    #     if not ftv_id:
-    #         return
-    #     return cache.use_cache(
-    #         self._get_tv_allart, ftv_id,
-    #         cache_name='fanart_tv.tv.all.{}.{}'.format(self.language, ftv_id),
-    #         cache_only=self.cache_only,
-    #         cache_refresh=self.cache_refresh)
+    def get_all_artwork(self, ftv_id, ftv_type):
+        if ftv_type == 'movies':
+            return self.get_movies_all_artwork(ftv_id)
+        if ftv_type == 'tv':
+            return self.get_tv_all_artwork(ftv_id)
 
-    # def get_movie_allart(self, ftv_id):
-    #     if not ftv_id:
-    #         return
-    #     return cache.use_cache(
-    #         self._get_movie_allart, ftv_id,
-    #         cache_name='fanart_tv.movie.all.{}.{}'.format(self.language, ftv_id),
-    #         cache_only=self.cache_only,
-    #         cache_refresh=self.cache_refresh)
-
-    def refresh_all_artwork(self, ftv_id=None, ftv_type=None, ok_dialog=True, container_refresh=True):
+    def refresh_all_artwork(self, ftv_id, ftv_type, ok_dialog=True, container_refresh=True):
         self.cache_refresh = True
         with utils.busy_dialog():
-            artwork = None
-            if ftv_type == 'movies':
-                artwork = self.get_movie_allart(ftv_id)
-            elif ftv_type == 'tv':
-                artwork = self.get_tv_allart(ftv_id)
+            artwork = self.get_all_artwork(ftv_id, ftv_type)
         if ok_dialog and not artwork:
             xbmcgui.Dialog().ok('FanartTV', ADDON.getLocalizedString(32217).format(ftv_type, ftv_id))
-        elif ok_dialog and artwork:
+        if ok_dialog and artwork:
             xbmcgui.Dialog().ok('FanartTV', ADDON.getLocalizedString(32218).format(
                 ftv_type, ftv_id, ', '.join([k.capitalize() for k, v in artwork.items() if v])))
         if artwork and container_refresh:
             xbmc.executebuiltin('Container.Refresh')
         return artwork
 
-    def _get_artwork_selection(self, ftv_id, ftv_type, artwork_type, get_list=False):
-        if ftv_type == 'movies' and artwork_type == 'clearart':
-            return self.get_movie_clearart(ftv_id, get_list=get_list)
-        if ftv_type == 'movies' and artwork_type == 'clearlogo':
-            return self.get_movie_clearlogo(ftv_id, get_list=get_list)
-        if ftv_type == 'movies' and artwork_type == 'banner':
-            return self.get_movie_banner(ftv_id, get_list=get_list)
-        if ftv_type == 'movies' and artwork_type == 'landscape':
-            return self.get_movie_landscape(ftv_id, get_list=get_list)
-        if ftv_type == 'movies' and artwork_type == 'fanart':
-            return self.get_movie_fanart(ftv_id, get_list=get_list)
-        if ftv_type == 'movies' and artwork_type == 'poster':
-            return self.get_movie_poster(ftv_id, get_list=get_list)
-        if ftv_type == 'tv' and artwork_type == 'discart':
-            return self.get_tv_discart(ftv_id, get_list=get_list)
-        if ftv_type == 'tv' and artwork_type == 'clearart':
-            return self.get_tv_clearart(ftv_id, get_list=get_list)
-        if ftv_type == 'tv' and artwork_type == 'clearlogo':
-            return self.get_tv_clearlogo(ftv_id, get_list=get_list)
-        if ftv_type == 'tv' and artwork_type == 'banner':
-            return self.get_tv_banner(ftv_id, get_list=get_list)
-        if ftv_type == 'tv' and artwork_type == 'landscape':
-            return self.get_tv_landscape(ftv_id, get_list=get_list)
-        if ftv_type == 'tv' and artwork_type == 'fanart':
-            return self.get_tv_fanart(ftv_id, get_list=get_list)
-        if ftv_type == 'tv' and artwork_type == 'poster':
-            return self.get_tv_poster(ftv_id, get_list=get_list)
-        if ftv_type == 'tv' and artwork_type == 'characterart':
-            return self.get_tv_characterart(ftv_id, get_list=get_list)
+    def get_artwork(self, ftv_id, ftv_type, artwork_type, get_list=False):
+        if ftv_type == 'movies':
+            if artwork_type == 'clearart':
+                return self.get_movies_clearart(ftv_id, get_list=get_list)
+            if artwork_type == 'clearlogo':
+                return self.get_movies_clearlogo(ftv_id, get_list=get_list)
+            if artwork_type == 'banner':
+                return self.get_movies_banner(ftv_id, get_list=get_list)
+            if artwork_type == 'landscape':
+                return self.get_movies_landscape(ftv_id, get_list=get_list)
+            if artwork_type == 'fanart':
+                return self.get_movies_fanart(ftv_id, get_list=get_list)
+            if artwork_type == 'poster':
+                return self.get_movies_poster(ftv_id, get_list=get_list)
+        if ftv_type == 'tv':
+            if artwork_type == 'discart':
+                return self.get_tv_discart(ftv_id, get_list=get_list)
+            if artwork_type == 'clearart':
+                return self.get_tv_clearart(ftv_id, get_list=get_list)
+            if artwork_type == 'clearlogo':
+                return self.get_tv_clearlogo(ftv_id, get_list=get_list)
+            if artwork_type == 'banner':
+                return self.get_tv_banner(ftv_id, get_list=get_list)
+            if artwork_type == 'landscape':
+                return self.get_tv_landscape(ftv_id, get_list=get_list)
+            if artwork_type == 'fanart':
+                return self.get_tv_fanart(ftv_id, get_list=get_list)
+            if artwork_type == 'poster':
+                return self.get_tv_poster(ftv_id, get_list=get_list)
+            if artwork_type == 'characterart':
+                return self.get_tv_characterart(ftv_id, get_list=get_list)
 
-    def select_artwork(self, ftv_id=None, ftv_type=None, ok_dialog=True, container_refresh=True, blacklist=[]):
+    def select_artwork(self, ftv_id, ftv_type, container_refresh=True, blacklist=[]):
         if ftv_type not in ['movies', 'tv']:
             return
         with utils.busy_dialog():
             artwork = self.get_artwork_request(ftv_id, ftv_type)
-        if ok_dialog and not artwork:
-            xbmcgui.Dialog().ok('FanartTV', ADDON.getLocalizedString(32217).format(ftv_type, ftv_id))
         if not artwork:
-            return
+            return xbmcgui.Dialog().notification('FanartTV', ADDON.getLocalizedString(32217).format(ftv_type, ftv_id))
 
         # Choose Type
         _artwork_types = ['poster', 'fanart', 'clearart', 'clearlogo', 'landscape', 'banner']
         _artwork_types.append('discart' if ftv_type == 'movies' else 'characterart')
         artwork_types = [i for i in _artwork_types if i not in blacklist]  # Remove types that we previously looked for
-        choice = xbmcgui.Dialog().select('Choose art', artwork_types)
-
-        # User exited
+        choice = xbmcgui.Dialog().select(xbmc.getLocalizedString(13511), artwork_types)
         if choice == -1:
             return
 
         # Get artwork of user's choosing
         artwork_type = artwork_types[choice]
-        artwork_items = self._get_artwork_selection(ftv_id, ftv_type, artwork_type, get_list=True)
+        artwork_items = self.get_artwork(ftv_id, ftv_type, artwork_type, get_list=True)
 
         # If there was not artwork of that type found then blacklist it before re-prompting
         if not artwork_items:
-            if ok_dialog:
-                xbmcgui.Dialog().ok('FanartTV', ADDON.getLocalizedString(32217).format(ftv_type, ftv_id))
+            xbmcgui.Dialog().notification('FanartTV', ADDON.getLocalizedString(32217).format(ftv_type, ftv_id))
             blacklist.append(artwork_types[choice])
-            return self.select_artwork(
-                ftv_id=ftv_id, ftv_type=ftv_type, ok_dialog=ok_dialog,
-                container_refresh=container_refresh, blacklist=blacklist)
+            return self.select_artwork(ftv_id, ftv_type, container_refresh, blacklist)
 
         # Choose artwork from options
         items = [
             ListItem(
                 label=i.get('url'),
-                label2='Lang: {} | Likes: {} | ID: {}'.format(i.get('lang', ''), i.get('likes', 0), i.get('id', '')),
+                label2=ADDON.getLocalizedString(32219).format(i.get('lang', ''), i.get('likes', 0), i.get('id', '')),
                 art={'thumb': i.get('url')}).get_listitem() for i in artwork_items if i.get('url')]
-        choice = xbmcgui.Dialog().select('Choose art', items, useDetails=True)
-
-        # If user hits back go back to main menu rather than exit completely
-        if choice == -1:
-            return self.select_artwork(
-                ftv_id=ftv_id, ftv_type=ftv_type, ok_dialog=ok_dialog,
-                container_refresh=container_refresh, blacklist=blacklist)
+        choice = xbmcgui.Dialog().select(xbmc.getLocalizedString(13511), items, useDetails=True)
+        if choice == -1:  # If user hits back go back to main menu rather than exit completely
+            return self.select_artwork(ftv_id, ftv_type, container_refresh, blacklist)
 
         # Cache our choice as the best artwork forever since it was selected manually
         # Some types have have HD and SD variants so set cache for both

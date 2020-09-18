@@ -207,6 +207,27 @@ class TraktAPI(RequestAPI):
     def get_imdb_top250(self):
         return cache.use_cache(self.get_itemlist_ranked, 'users', 'nielsz', 'lists', 'active-imdb-top-250', 'items')
 
+    def _get_id(self, id_type, unique_id, trakt_type=None, output_type=None):
+        response = self.get_request_lc('search', id_type, unique_id, type=trakt_type)
+        for i in response:
+            if i.get('type') != trakt_type:
+                continue
+            if i.get(trakt_type, {}).get('ids', {}).get(id_type) != unique_id:
+                continue
+            if not output_type:
+                return i.get(trakt_type, {}).get('ids', {})
+            return i.get(trakt_type, {}).get('ids', {}).get(output_type)
+
+    def get_id(self, id_type, unique_id, trakt_type=None, output_type=None):
+        """
+        trakt_type: movie, show, episode, person, list
+        output_type: trakt, slug, imdb, tmdb, tvdb
+        """
+        cache.use_cache(
+            self._get_id, id_type, unique_id, trakt_type=None, output_type=None,
+            cache_name='trakt_get_id.{}.{}.{}.{}'.format(id_type, unique_id, trakt_type, output_type),
+            cache_days=self.cache_long)
+
     def get_itemlist_sorted_cached(self, *args, **kwargs):
         page = kwargs.get('page') or 1
         limit = kwargs.get('limit') or 20
@@ -222,20 +243,6 @@ class TraktAPI(RequestAPI):
         index_a = index_z - limit
         index_z = len(items) if len(items) < index_z else index_z
         return {'items': items[index_a:index_z], 'pagecount': -(-len(items) // limit)}
-
-    """
-    ACTIVITY SYNCING
-    trakt_type: activity_type
-    movies: watched_at, collected_at, rated_at, watchlisted_at, recommendations_at, commented_at, paused_at, hidden_at
-    episodes: watched_at, collected_at, rated_at, watchlisted_at, commented_at, paused_at
-    shows: rated_at, watchlisted_at, recommendations_at, commented_at, hidden_at
-    seasons: rated_at, watchlisted_at, commented_at, hidden_at
-    comments: liked_at
-    lists: liked_at, updated_at, commented_at
-    watchlist: updated_at
-    recommendations: updated_at
-    account: settings_at
-    """
 
     def _get_activity(self, activities, trakt_type=None, activity_type=None):
         if not activities:

@@ -9,8 +9,8 @@ import resources.lib.constants as constants
 import resources.lib.rpc as rpc
 from resources.lib.listitem import ListItem
 from resources.lib.tmdb import TMDb
-from resources.lib.traktapi import TraktAPI
 from resources.lib.fanarttv import FanartTV
+from resources.lib.itemutils import ItemUtils
 from resources.lib.plugin import ADDONPATH, ADDON, PLUGINPATH
 
 
@@ -33,15 +33,19 @@ class Container(object):
     def add_items(self, items=None, allow_pagination=True, parent_params=None, kodi_db=None):
         if not items:
             return
-        sync_watched = self.get_trakt_sync_watched(self.container_content)
+        listitem_utils = ItemUtils(
+            kodi_db=self.kodi_db,
+            ftv_api=FanartTV(cache_only=self.ftv_is_cache_only(is_widget=self.is_widget)))
+        listitem_utils.set_trakt_watched()
         for i in items:
             if not allow_pagination and 'next_page' in i:
                 continue
             listitem = ListItem(parent_params=parent_params, **i)
-            listitem.set_tmdb_details(TMDb())
-            listitem.set_kodi_details(kodi_db=self.kodi_db, reverse=True)  # Merge kodi details last with reversed dictionary merge to preference library details
-            listitem.set_watched_from_trakt(sync_watched)
-            listitem.set_art_from_fanarttv(FanartTV(cache_only=self.ftv_is_cache_only(is_widget=self.is_widget)))
+            listitem.set_details(details=listitem_utils.get_tmdb_details(listitem))  # Quick because only get cached
+            listitem.set_details(details=listitem_utils.get_ftv_details(listitem), reverse=True)  # Slow when not cache only
+            listitem.set_details(details=listitem_utils.get_kodi_details(listitem), reverse=True)  # Quick because local db
+            # listitem.set_details(details=listitem_utils.get_external_ids(listitem))  # Slow first time
+            listitem.set_playcount(playcount=listitem_utils.get_playcount_from_trakt(listitem))  # Quick because of agressive caching of Trakt object and pre-emptive dict comprehension
             listitem.set_standard_context_menu()
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
@@ -60,13 +64,6 @@ class Container(object):
         if not is_widget and self.ftv_lookup:
             return False
         return True
-
-    def get_trakt_sync_watched(self, container_content):
-        if container_content == 'movies':
-            return TraktAPI().get_sync_watched('movie', quick_list=True) or {}
-        if container_content in ['tvshows', 'seasons', 'episodes']:
-            return TraktAPI().get_sync_watched('show', quick_list=True) or {}
-        return {}
 
     def get_kodi_database(self, tmdb_type):
         if tmdb_type == 'movie':

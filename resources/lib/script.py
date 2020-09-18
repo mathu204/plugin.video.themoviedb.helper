@@ -5,6 +5,7 @@
 import sys
 import xbmcgui
 from resources.lib.fanarttv import FanartTV
+from resources.lib.plugin import ADDON
 
 
 class Script(object):
@@ -28,8 +29,8 @@ class Script(object):
 
     def manage_ftv_artwork(self, ftv_id=None, ftv_type=None):
         choice = xbmcgui.Dialog().contextmenu([
-            'Select artwork',
-            'Refresh all artwork'])
+            ADDON.getLocalizedString(32220),
+            ADDON.getLocalizedString(32221)])
         if choice == -1:
             return
         if choice == 0:
@@ -40,7 +41,7 @@ class Script(object):
     def router(self):
         if not self.params:
             return
-        if self.params.get('ftv_movie_artwork'):
-            return self.manage_ftv_artwork(ftv_id=self.params.get('ftv_movie_artwork'), ftv_type='movies')
+        if self.params.get('ftv_movies_artwork'):
+            return self.manage_ftv_artwork(ftv_id=self.params.get('ftv_movies_artwork'), ftv_type='movies')
         if self.params.get('ftv_tv_artwork'):
             return self.manage_ftv_artwork(ftv_id=self.params.get('ftv_tv_artwork'), ftv_type='tv')
