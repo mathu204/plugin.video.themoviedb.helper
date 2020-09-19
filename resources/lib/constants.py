@@ -36,6 +36,14 @@ TMDB_BASIC_LISTS = {
     'on_the_air': {
         'path': '{tmdb_type}/on_the_air',
         'key': 'results'},
+    'cast': {
+        'path': '{tmdb_type}/{tmdb_id}/credits',
+        'key': 'cast',
+        'tmdb_type': 'person'},
+    'crew': {
+        'path': '{tmdb_type}/{tmdb_id}/credits',
+        'key': 'crew',
+        'tmdb_type': 'person'},
     'recommendations': {
         'path': '{tmdb_type}/{tmdb_id}/recommendations',
         'key': 'results',
@@ -43,4 +51,32 @@ TMDB_BASIC_LISTS = {
     'similar': {
         'path': '{tmdb_type}/{tmdb_id}/similar',
         'key': 'results',
-        'dbid_sorting': True}}
+        'dbid_sorting': True},
+    'stars_in_movies': {
+        'path': 'person/{tmdb_id}/movie_credits',
+        'key': 'cast',
+        'tmdb_type': 'movie',
+        'dbid_sorting': True},
+    'stars_in_tvshows': {
+        'path': 'person/{tmdb_id}/tv_credits',
+        'key': 'cast',
+        'dbid_sorting': True,
+        'tmdb_type': 'tv'},
+    'crew_in_movies': {
+        'path': 'person/{tmdb_id}/movie_credits',
+        'key': 'crew',
+        'dbid_sorting': True,
+        'tmdb_type': 'movie'},
+    'crew_in_tvshows': {
+        'path': 'person/{tmdb_id}/tv_credits',
+        'key': 'crew',
+        'dbid_sorting': True,
+        'tmdb_type': 'tv'},
+    'images': {
+        'path': 'person/{tmdb_id}/images',
+        'key': 'profiles',
+        'tmdb_type': 'image'},
+    'videos': {
+        'path': '{tmdb_type}/{tmdb_id}/videos',
+        'key': 'results',
+        'tmdb_type': 'video'}}

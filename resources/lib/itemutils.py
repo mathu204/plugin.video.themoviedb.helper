@@ -1,4 +1,5 @@
 import resources.lib.rpc as rpc
+import resources.lib.utils as utils
 from resources.lib.traktapi import TraktAPI
 from resources.lib.tmdb import TMDb
 
@@ -53,6 +54,8 @@ class ItemUtils(object):
         return TMDb().get_details(
             tmdb_type=listitem.get_tmdb_type(),
             tmdb_id=listitem.unique_ids.get('tmdb'),
+            season=listitem.infolabels.get('season') if listitem.infolabels.get('mediatype') in ['season', 'episode'] else None,
+            episode=listitem.infolabels.get('episode') if listitem.infolabels.get('mediatype') == 'episode' else None,
             cache_only=cache_only)
 
     def get_kodi_dbid(self, listitem):
@@ -96,16 +99,20 @@ class ItemUtils(object):
 
     def get_playcount_from_trakt(self, listitem):
         if listitem.infolabels.get('mediatype') == 'movie':
-            return self.trakt_watched_movies.get(listitem.unique_ids.get('tmdb'), {}).get('plays')
+            tmdb_id = utils.try_parse_int(listitem.unique_ids.get('tmdb'))
+            return self.trakt_watched_movies.get(tmdb_id, {}).get('plays')
         if listitem.infolabels.get('mediatype') == 'episode':
+            tmdb_id = utils.try_parse_int(listitem.unique_ids.get('tvshow.tmdb'))
             return self.get_episode_playcount(
-                seasons=self.trakt_watched_tvshows.get(listitem.unique_ids.get('tvshow.tmdb'), {}).get('seasons', []),
+                seasons=self.trakt_watched_tvshows.get(tmdb_id, {}).get('seasons', []),
                 season=listitem.infolabels.get('season') or -2,
                 episode=listitem.infolabels.get('episode') or -2)
         if listitem.infolabels.get('mediatype') == 'tvshow':
+            tmdb_id = utils.try_parse_int(listitem.unique_ids.get('tmdb'))
             return self.get_episode_watchedcount(
-                seasons=self.trakt_watched_tvshows.get(listitem.unique_ids.get('tmdb'), {}).get('seasons', []))
+                seasons=self.trakt_watched_tvshows.get(tmdb_id, {}).get('seasons', []))
         if listitem.infolabels.get('mediatype') == 'season':
+            tmdb_id = utils.try_parse_int(listitem.unique_ids.get('tvshow.tmdb'))
             return self.get_episode_watchedcount(
-                seasons=self.trakt_watched_tvshows.get(listitem.unique_ids.get('tvshow.tmdb'), {}).get('seasons', []),
+                seasons=self.trakt_watched_tvshows.get(tmdb_id, {}).get('seasons', []),
                 season=listitem.infolabels.get('season') or -2)

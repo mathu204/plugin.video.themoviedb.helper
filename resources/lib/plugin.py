@@ -27,7 +27,9 @@ def get_mpaa_prefix():
     return ''
 
 
-def convert_type(tmdb_type, output):
+def convert_type(tmdb_type, output, season=None, episode=None):
+    if tmdb_type == 'tv' and season is not None:
+        tmdb_type == 'episode' if episode is not None else 'season'
     if output == TYPE_PLURAL:
         if tmdb_type == 'movie':
             return xbmc.getLocalizedString(342)
@@ -124,6 +126,11 @@ def get_basedir_list(item_type=None, trakt=False, tmdb=False):
         basedir += basedir_tmdb()
     if trakt:
         basedir += basedir_trakt()
+    return _get_basedir_list(item_type, basedir)
+
+
+def _get_basedir_list(item_type=None, basedir=None):
+    basedir = basedir or []
 
     items = []
     space = '' if item_type else ' '  # If only one type spaces are not needed for label because we dont add type name
@@ -141,6 +148,122 @@ def get_basedir_list(item_type=None, trakt=False, tmdb=False):
             items.append(item)
 
     return items
+
+
+def get_basedir_details(item_type=None):
+    return _get_basedir_list(item_type, basedir_details())
+
+
+def basedir_details():
+    return [
+        {
+            'label': xbmc.getLocalizedString(206),
+            'params': {'info': 'cast'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/cast.png'.format(ADDONPATH)},
+            'types': ['movie', 'tv']},
+        {
+            'label': ADDON.getLocalizedString(32223),
+            'params': {'info': 'recommendations'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/recommended.png'.format(ADDONPATH)},
+            'types': ['movie', 'tv']},
+        {
+            'label': ADDON.getLocalizedString(32224),
+            'params': {'info': 'similar'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/similar.png'.format(ADDONPATH)},
+            'types': ['movie', 'tv']},
+        {
+            'label': ADDON.getLocalizedString(32225),
+            'params': {'info': 'crew'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/cast.png'.format(ADDONPATH)},
+            'types': ['movie', 'tv']},
+        {
+            'label': ADDON.getLocalizedString(32226),
+            'params': {'info': 'posters'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/images.png'.format(ADDONPATH)},
+            'types': ['movie', 'tv']},
+        {
+            'label': xbmc.getLocalizedString(20445),
+            'params': {'info': 'fanart'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/images.png'.format(ADDONPATH)},
+            'types': ['movie', 'tv']},
+        {
+            'label': xbmc.getLocalizedString(21861),
+            'params': {'info': 'movie_keywords'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/tags.png'.format(ADDONPATH)},
+            'types': ['movie']},
+        {
+            'label': ADDON.getLocalizedString(32188),
+            'params': {'info': 'reviews'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/reviews.png'.format(ADDONPATH)},
+            'types': ['movie', 'tv']},
+        {
+            'label': ADDON.getLocalizedString(32227),
+            'params': {'info': 'stars_in_movies'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/movies.png'.format(ADDONPATH)},
+            'types': ['person']},
+        {
+            'label': ADDON.getLocalizedString(32228),
+            'params': {'info': 'stars_in_tvshows'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/tv.png'.format(ADDONPATH)},
+            'types': ['person']},
+        {
+            'label': ADDON.getLocalizedString(32229),
+            'params': {'info': 'crew_in_movies'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/movies.png'.format(ADDONPATH)},
+            'types': ['person']},
+        {
+            'label': ADDON.getLocalizedString(32230),
+            'params': {'info': 'crew_in_tvshows'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/tv.png'.format(ADDONPATH)},
+            'types': ['person']},
+        {
+            'label': ADDON.getLocalizedString(32191),
+            'params': {'info': 'images'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/images.png'.format(ADDONPATH)},
+            'types': ['person']},
+        {
+            'label': xbmc.getLocalizedString(33054),
+            'params': {'info': 'seasons'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/episodes.png'.format(ADDONPATH)},
+            'types': ['tv']},
+        {
+            'label': xbmc.getLocalizedString(206),
+            'params': {'info': 'episode_cast'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/cast.png'.format(ADDONPATH)},
+            'types': ['episode']},
+        {
+            'label': ADDON.getLocalizedString(32231),
+            'params': {'info': 'episode_thumbs'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/images.png'.format(ADDONPATH)},
+            'types': ['episode']},
+        {
+            'label': xbmc.getLocalizedString(10025),
+            'params': {'info': 'videos'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/movies.png'.format(ADDONPATH)},
+            'types': ['movie', 'tv', 'episode']},
+        {
+            'label': ADDON.getLocalizedString(32232),
+            'params': {'info': 'trakt_inlists'},
+            'path': PLUGINPATH,
+            'art': {'thumb': '{}/resources/icons/tmdb/trakt.png'.format(ADDONPATH)},
+            'types': ['movie', 'tv']}]
 
 
 def basedir_trakt():

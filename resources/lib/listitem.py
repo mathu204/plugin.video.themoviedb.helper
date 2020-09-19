@@ -84,6 +84,9 @@ class ListItem(object):
             if utils.try_parse_int(self.infolabels.get('episode')):
                 self.infoproperties['totalepisodes'] = utils.try_parse_int(self.infolabels.get('episode'))
                 self.infoproperties['unwatchedepisodes'] = self.infoproperties.get('totalepisodes') - utils.try_parse_int(self.infoproperties.get('watchedepisodes'))
+                if playcount and not self.infoproperties.get('unwatchedepisodes'):
+                    self.infolabels['playcount'] = playcount
+                    self.infolabels['overlay'] = 5
 
     def get_tmdb_type(self):
         if self.infolabels.get('mediatype') == 'movie':
@@ -94,12 +97,29 @@ class ListItem(object):
     def set_details(self, details=None, reverse=False):
         if not details:
             return
-        self.stream_details = utils.merge_two_dicts(details.get('streamdetails', {}), self.stream_details, reverse=reverse)
+        self.stream_details = utils.merge_two_dicts(details.get('stream_details', {}), self.stream_details, reverse=reverse)
         self.infolabels = utils.merge_two_dicts(details.get('infolabels', {}), self.infolabels, reverse=reverse)
         self.infoproperties = utils.merge_two_dicts(details.get('infoproperties', {}), self.infoproperties, reverse=reverse)
         self.art = utils.merge_two_dicts(details.get('art', {}), self.art, reverse=reverse)
         self.unique_ids = utils.merge_two_dicts(details.get('unique_ids', {}), self.unique_ids, reverse=reverse)
         self.cast = self.cast or details.get('cast', [])
+
+    def set_params_info_reroute(self):
+        if self.params.get('info') != 'details':
+            return
+        if self.infolabels.get('mediatype') in ['movie', 'episode', 'video']:
+            self.params['info'] = 'play'
+            self.is_folder = False
+        elif self.infolabels.get('mediatype') == 'tvshow':
+            self.params['info'] = 'seasons'
+        elif self.infolabels.get('mediatype') == 'season':
+            self.params['info'] = 'episodes'
+
+    def set_unique_ids_to_infoproperties(self):
+        for k, v in self.unique_ids.items():
+            if not v:
+                continue
+            self.infoproperties['{}_id'.format(k)] = v
 
     def get_url(self):
         paramstring = '?{}'.format(utils.urlencode_params(**self.params)) if self.params else ''

@@ -1123,6 +1123,56 @@ msgctxt "#32222"
 msgid "Manage artwork"
 msgstr ""
 
+#: /resources/lib/plugin.py
+msgctxt "#32223"
+msgid "Recommended"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32224"
+msgid "Similar"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32225"
+msgid "Crew"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32226"
+msgid "Posters"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32227"
+msgid "Cast in Movies"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32228"
+msgid "Cast in TV Shows"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32229"
+msgid "Crew in Movies"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32230"
+msgid "Crew in TV Shows"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32231"
+msgid "Thumbs"
+msgstr ""
+
+#: /resources/lib/plugin.py
+msgctxt "#32232"
+msgid "In Trakt Lists"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""

@@ -72,7 +72,7 @@ def get_person_stats(person):
         utils.try_parse_int(infoproperties.get('numitems.dbid.movies'))
         + utils.try_parse_int(infoproperties.get('numitems.dbid.tvshows'))
         + utils.try_parse_int(infoproperties.get('numitems.dbid.episodes')))
-    return utils.del_empty_keys(infoproperties, ['N/A', '0.0', '0'])
+    return infoproperties
 
 
 def get_directory(url):
@@ -136,7 +136,7 @@ def _get_infolabels(item, key, dbid):
     infolabels['trailer'] = item.get('trailer')
     infolabels['dateadded'] = item.get('dateadded')
     infolabels['overlay'] = 5 if utils.try_parse_int(item.get('playcount')) > 0 and key in ['movie', 'episode'] else 4
-    return utils.del_empty_keys(infolabels, ['N/A', '0.0', '0'])
+    return infolabels
 
 
 def _get_infoproperties(item):
@@ -147,7 +147,7 @@ def _get_infoproperties(item):
     infoproperties['imdb_votes'] = '{:0,.0f}'.format(utils.try_parse_float(item.get('ratings', {}).get('imdb', {}).get('votes')))
     infoproperties['tmdb_rating'] = '{0:.1f}'.format(utils.try_parse_float(item.get('ratings', {}).get('themoviedb', {}).get('rating')))
     infoproperties['tmdb_votes'] = '{:0,.0f}'.format(utils.try_parse_float(item.get('ratings', {}).get('themoviedb', {}).get('votes')))
-    return utils.del_empty_keys(infoproperties, ['N/A', '0.0', '0'])
+    return infoproperties
 
 
 def _get_niceitem(item, key, dbid):

@@ -146,12 +146,22 @@ def merge_two_dicts_deep(x, y, reverse=False):
     return z
 
 
+def merge_two_items(base_item, item):
+    item = item or {}
+    base_item = base_item or {}
+    item['stream_details'] = merge_two_dicts(base_item.get('stream_details', {}), item.get('stream_details', {}))
+    item['params'] = merge_two_dicts(base_item.get('params', {}), item.get('params', {}))
+    item['infolabels'] = merge_two_dicts(base_item.get('infolabels', {}), item.get('infolabels', {}))
+    item['infoproperties'] = merge_two_dicts(base_item.get('infoproperties', {}), item.get('infoproperties', {}))
+    item['art'] = merge_two_dicts(base_item.get('art', {}), item.get('art', {}))
+    item['unique_ids'] = merge_two_dicts(base_item.get('unique_ids', {}), item.get('unique_ids', {}))
+    item['cast'] = item.get('cast') or base_item.get('cast') or []
+    return item
+
+
 def del_empty_keys(d, values=[]):
-    my_dict = d.copy()
-    for k, v in d.items():
-        if not v or v in values:
-            del my_dict[k]
-    return my_dict
+    values += [None, '']
+    return {k: v for k, v in d.items() if v not in values}
 
 
 def find_dict_in_list(list_of_dicts, key, value):

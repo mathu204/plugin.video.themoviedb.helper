@@ -25,6 +25,7 @@ class Container(object):
         self.container_content = ''
         self.container_update = None
         self.container_refresh = False
+        self.item_type = None
         self.kodi_db = None
         self.ftv_lookup = ADDON.getSettingBool('fanarttv_lookup')
         self.ftv_widget_lookup = ADDON.getSettingBool('widget_fanarttv_lookup')
@@ -32,7 +33,7 @@ class Container(object):
 
         # Legacy code clean-up for back compatibility
         # TODO: Maybe only necessary for player code??
-        if self.params.get('type'):
+        if 'type' in self.params:
             self.params['tmdb_type'] = self.params.pop('type')
         if self.params.get('tmdb_type') in ['season', 'episode']:
             self.params['tmdb_type'] = 'tv'
@@ -55,11 +56,22 @@ class Container(object):
             # listitem.set_details(details=listitem_utils.get_external_ids(listitem))  # Slow first time
             listitem.set_playcount(playcount=listitem_utils.get_playcount_from_trakt(listitem))  # Quick because of agressive caching of Trakt object and pre-emptive dict comprehension
             listitem.set_standard_context_menu()
+            listitem.set_unique_ids_to_infoproperties()
+            # listitem.set_params_info_reroute()  # Reroute details TODO: Add details route to context menu
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
                 url=listitem.get_url(),
                 listitem=listitem.get_listitem(),
                 isFolder=listitem.is_folder)
+
+    def set_params_to_container(self, **kwargs):
+        for k, v in kwargs.items():
+            if not k or not v:
+                continue
+            try:
+                xbmcplugin.setProperty(self.handle, u'Param.{}'.format(k), u'{}'.format(v))  # Set params to container properties
+            except Exception as exc:
+                utils.kodi_log(u'Error: {}\nUnable to set Param.{} to {}'.format(exc, k, v), 1)
 
     def finish_container(self, update_listing=False, plugin_category='', container_content=''):
         xbmcplugin.setPluginCategory(self.handle, plugin_category)  # Container.PluginCategory
@@ -89,22 +101,35 @@ class Container(object):
     def list_details(self, tmdb_type, tmdb_id, season=None, episode=None, **kwargs):
         base_item = TMDb().get_details(tmdb_type, tmdb_id, season, episode)
         base_item.setdefault('params', {})
-
+        basedir_items = []
         if tmdb_type == 'movie':
             base_item['params']['info'] = 'play'
+            base_item['infolabels']['mediatype'] = 'movie'
+            basedir_items = plugin.get_basedir_details('movie')
         elif tmdb_type == 'tv' and season is not None and episode is not None:
             base_item['params']['info'] = 'play'
             base_item['params']['season'] = season
             base_item['params']['episode'] = episode
+            base_item['infolabels']['mediatype'] = 'episode'
+            basedir_items = plugin.get_basedir_details('episode')
         elif tmdb_type == 'tv' and season is not None:
             base_item['params']['info'] = 'episodes'
             base_item['params']['season'] = season
+            base_item['infolabels']['mediatype'] = 'season'
+            basedir_items = plugin.get_basedir_details('season')
         elif tmdb_type == 'tv':
             base_item['params']['info'] = 'seasons'
+            base_item['infolabels']['mediatype'] = 'tvshow'
+            basedir_items = plugin.get_basedir_details('tv')
+        elif tmdb_type == 'person':
+            base_item['params']['info'] = 'details'
+            base_item['infolabels']['mediatype'] = 'video'
+            basedir_items = plugin.get_basedir_details('person')
         else:
             base_item['params']['info'] = 'details'
 
-        items = [base_item]
+        items = [base_item] + [utils.merge_two_items(base_item, i) for i in basedir_items if i]
+
         self.container_content = self.get_container_content(tmdb_type, season, episode)
         return items
 
@@ -173,19 +198,26 @@ class Container(object):
 
     def list_tmdb(self, info, tmdb_type, tmdb_id=None, page=None, **kwargs):
         info_model = constants.TMDB_BASIC_LISTS.get(info)
+        info_tmdb_type = info_model.get('tmdb_type') or tmdb_type
         items = TMDb().get_basic_list(
             path=info_model.get('path', '').format(tmdb_type=tmdb_type, tmdb_id=tmdb_id, **kwargs),
-            tmdb_type=tmdb_type,
+            tmdb_type=info_tmdb_type,
             key=info_model.get('key', 'results'),
             page=page)
-        self.kodi_db = self.get_kodi_database(tmdb_type)
-        self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
+        self.kodi_db = self.get_kodi_database(info_tmdb_type)
+        self.container_content = plugin.convert_type(info_tmdb_type, plugin.TYPE_CONTAINER)
         return items
 
     def list_seasons(self, tmdb_id, **kwargs):
         items = TMDb().get_seasons(tmdb_id)
         self.kodi_db = self.get_kodi_database('tv')
         self.container_content = plugin.convert_type('season', plugin.TYPE_CONTAINER)
+        return items
+
+    def list_episodes(self, tmdb_id, season, **kwargs):
+        items = TMDb().get_episodes(tmdb_id, season)
+        self.kodi_db = self.get_kodi_database('tv')
+        self.container_content = plugin.convert_type('episode', plugin.TYPE_CONTAINER)
         return items
 
     def get_items_router(self, **kwargs):
@@ -204,6 +236,8 @@ class Container(object):
             return self.list_details(**kwargs)
         if info == 'seasons':
             return self.list_seasons(**kwargs)
+        if info == 'episodes':
+            return self.list_episodes(**kwargs)
         if info in constants.TMDB_BASIC_LISTS:
             return self.list_tmdb(**kwargs)
         return self.list_basedir(info)
@@ -217,6 +251,7 @@ class Container(object):
             update_listing=self.update_listing,
             plugin_category=self.plugin_category,
             container_content=self.container_content)
+        self.set_params_to_container(**self.params)
         if self.container_update:
             xbmc.executebuiltin('Container.Update({})'.format(self.container_update))
         if self.container_refresh:
