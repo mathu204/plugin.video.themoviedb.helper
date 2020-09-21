@@ -213,3 +213,15 @@ def convert_timestamp(time_str, time_fmt="%Y-%m-%dT%H:%M:%S", time_lim=19, utc_c
     except Exception as exc:
         kodi_log(exc, 1)
         return
+
+
+def age_difference(birthday, deathday=''):
+    try:  # Added Error Checking as strptime doesn't work correctly on LibreElec
+        deathday = convert_timestamp(deathday, '%Y-%m-%d', 10) if deathday else datetime.datetime.now()
+        birthday = convert_timestamp(birthday, '%Y-%m-%d', 10)
+        age = deathday.year - birthday.year
+        if birthday.month * 100 + birthday.day > deathday.month * 100 + deathday.day:
+            age = age - 1
+        return age
+    except Exception:
+        return

@@ -190,6 +190,7 @@ class TMDb(RequestAPI):
 
     def get_infoproperties(self, item, tmdb_type, infoproperties=None, detailed=True):
         infoproperties = infoproperties or {}
+        infoproperties['tmdb_type'] = tmdb_type
         infoproperties['role'] = item.get('character') or item.get('job') or item.get('department')
         infoproperties['character'] = item.get('character')
         infoproperties['job'] = item.get('job')
@@ -213,15 +214,15 @@ class TMDb(RequestAPI):
                 infoproperties = utils.iter_props(
                     item['spoken_languages'], 'language', infoproperties,
                     name='name', iso='iso_639_1')
-            if item.get('keywords'):
+            if item.get('keywords', {}).get('keywords'):
                 infoproperties = utils.iter_props(
-                    item['keywords'], 'keyword', infoproperties,
+                    item['keywords']['keywords'], 'keyword', infoproperties,
                     name='name', tmdb_id='id')
-            if item.get('reviews'):
+            if item.get('reviews', {}).get('results'):
                 infoproperties = utils.iter_props(
-                    item['reviews'], 'review', infoproperties,
+                    item['reviews']['results'], 'review', infoproperties,
                     content='content', tmdb_id='id', author='author')
-        if tmdb_type == 'tv':
+        elif tmdb_type == 'tv':
             infoproperties['type'] = item.get('type')
             if item.get('networks'):
                 infoproperties = utils.iter_props(
@@ -262,6 +263,16 @@ class TMDb(RequestAPI):
                 infoproperties['next_aired.plot'] = i.get('overview')
                 infoproperties['next_aired.season'] = i.get('season_number')
                 infoproperties['next_aired.thumb'] = self.get_imagepath(i.get('still_path'))
+        elif tmdb_type == 'person':
+            infoproperties['born'] = item.get('place_of_birth')
+            infoproperties['biography'] = item.get('biography')
+            infoproperties['birthday'] = item.get('birthday')
+            infoproperties['deathday'] = item.get('deathday')
+            infoproperties['age'] = utils.age_difference(item.get('birthday'), item.get('deathday'))
+            if item.get('gender') == 1:
+                infoproperties['gender'] = ADDON.getLocalizedString(32071)
+            elif item.get('gender') == 2:
+                infoproperties['gender'] = ADDON.getLocalizedString(32070)
         return infoproperties
 
     def get_cast(self, item, cast=None):
@@ -276,7 +287,7 @@ class TMDb(RequestAPI):
                     cast.append(cast_item)
                     cast_item = None
                 elif i.get('character'):
-                    cast_item['role'] = '{} / {}'.format(cast_item.get('role'), i.get('character'))
+                    cast_item['role'] = u'{} / {}'.format(cast_item.get('role'), i.get('character'))
             if not cast_item:
                 cast_item = {
                     'name': i.get('name'),

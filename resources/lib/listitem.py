@@ -45,6 +45,14 @@ class ListItem(object):
             self.art['fanart'] = '{}/fanart.jpg'.format(ADDONPATH)
         return self.art
 
+    def get_tmdb_type(self):
+        if self.infolabels.get('mediatype') == 'movie':
+            return 'movie'
+        if self.infolabels.get('mediatype') in ['tvshow', 'season', 'episode']:
+            return 'tv'
+        if self.infoproperties.get('tmdb_type') == 'person':
+            return 'person'
+
     def get_ftv_type(self):
         if self.infolabels.get('mediatype') == 'movie':
             return 'movies'
@@ -65,11 +73,21 @@ class ListItem(object):
         if ftv_type and ftv_id:
             return [(
                 ADDON.getLocalizedString(32222),
-                'RunScript(plugin.video.themoviedb.helper,ftv_{}_artwork={})'.format(ftv_type, ftv_id))]
+                'RunScript(plugin.video.themoviedb.helper,manage_artwork,ftv_type={},ftv_id={})'.format(ftv_type, ftv_id))]
+        return []
+
+    def _context_item_refresh_details(self):
+        tmdb_id = self.unique_ids.get('tvshow.tmdb') or self.unique_ids.get('tmdb')
+        tmdb_type = self.get_tmdb_type()
+        if tmdb_type and tmdb_id:
+            return [(
+                ADDON.getLocalizedString(32233),
+                'RunScript(plugin.video.themoviedb.helper,refresh_details,tmdb_type={},tmdb_id={})'.format(tmdb_type, tmdb_id))]
         return []
 
     def set_standard_context_menu(self):
         self.context_menu += self._context_item_get_ftv_artwork()
+        self.context_menu += self._context_item_refresh_details()
         return self.context_menu
 
     def set_playcount(self, playcount):
@@ -87,12 +105,6 @@ class ListItem(object):
                 if playcount and not self.infoproperties.get('unwatchedepisodes'):
                     self.infolabels['playcount'] = playcount
                     self.infolabels['overlay'] = 5
-
-    def get_tmdb_type(self):
-        if self.infolabels.get('mediatype') == 'movie':
-            return 'movie'
-        if self.infolabels.get('mediatype') in ['tvshow', 'season', 'episode']:
-            return 'tv'
 
     def set_details(self, details=None, reverse=False):
         if not details:
