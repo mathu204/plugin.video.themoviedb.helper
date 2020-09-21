@@ -1,3 +1,4 @@
+import xbmc
 import resources.lib.plugin as plugin
 import resources.lib.utils as utils
 import resources.lib.cache as cache
@@ -13,7 +14,7 @@ TMDB_GENRE_IDS = {
     "Family": 10751, "Fantasy": 14, "History": 36, "Horror": 27, "Kids": 10762, "Music": 10402, "Mystery": 9648,
     "News": 10763, "Reality": 10764, "Romance": 10749, "Science Fiction": 878, "Sci-Fi & Fantasy": 10765, "Soap": 10766,
     "Talk": 10767, "TV Movie": 10770, "Thriller": 53, "War": 10752, "War & Politics": 10768, "Western": 37}
-APPEND_TO_RESPONSE = 'credits,images,release_dates,content_ratings,external_ids,videos,movie_credits,tv_credits'
+APPEND_TO_RESPONSE = 'credits,release_dates,content_ratings,external_ids,movie_credits,tv_credits,keywords,reviews'
 
 
 class TMDb(RequestAPI):
@@ -128,10 +129,6 @@ class TMDb(RequestAPI):
                 if i.get('certification'):
                     return '{0}{1}'.format(self.mpaa_prefix, i.get('certification'))
 
-    def get_collection_name(self, item):
-        if item.get('belongs_to_collection', {}) and item.get('belongs_to_collection', {}).get('name'):
-            return item.get('belongs_to_collection', {}).get('name')
-
     def get_episode_infolabel(self, item):
         if 'episode_number' in item:
             return item.get('episode_number')
@@ -170,18 +167,25 @@ class TMDb(RequestAPI):
 
     def _get_detailed_infolabels(self, item, tmdb_type, infolabels=None):
         infolabels = infolabels or {}
-        infolabels['set'] = self.get_collection_name(item)
         infolabels['genre'] = utils.dict_to_list(item.get('genres', []), 'name')
         infolabels['imdbnumber'] = item.get('imdb_id') or item.get('external_ids', {}).get('imdb_id')
-        infolabels['studio'] = utils.dict_to_list(item.get('production_companies', []), 'name')
         infolabels['country'] = utils.dict_to_list(item.get('production_countries', []), 'name')
-        infolabels['duration'] = utils.try_parse_int(item.get('runtime', 0)) * 60
         infolabels['status'] = item.get('status')
         infolabels['tagline'] = item.get('tagline')
         infolabels['director'] = [i.get('name') for i in item.get('credits', {}).get('crew', []) if i.get('name') and i.get('job') == 'Director']
         infolabels['writer'] = [i.get('name') for i in item.get('credits', {}).get('crew', []) if i.get('name') and i.get('department') == 'Writing']
         infolabels['trailer'] = self.get_trailer(item)
         infolabels['mpaa'] = self.get_mpaa_rating(item)
+        if item.get('episode_run_time'):
+            infolabels['duration'] = utils.try_parse_int(item['episode_run_time'][0]) * 60
+        elif item.get('runtime'):
+            infolabels['duration'] = utils.try_parse_int(item['runtime']) * 60
+        if item.get('networks'):
+            infolabels['studio'] = infolabels.setdefault('studio', []) + utils.dict_to_list(item.get('networks'), 'name')
+        elif item.get('production_companies'):
+            infolabels['studio'] = utils.dict_to_list(item.get('production_companies', []), 'name')
+        if item.get('belongs_to_collection'):
+            infolabels['set'] = item['belongs_to_collection'].get('name')
         return infolabels
 
     def get_infoproperties(self, item, tmdb_type, infoproperties=None, detailed=True):
@@ -190,7 +194,98 @@ class TMDb(RequestAPI):
         infoproperties['character'] = item.get('character')
         infoproperties['job'] = item.get('job')
         infoproperties['department'] = item.get('department')
+        infoproperties = self._get_detailed_infoproperties(item, tmdb_type, infoproperties) if detailed else infoproperties
         return utils.del_empty_keys(infoproperties)
+
+    def _get_detailed_infoproperties(self, item, tmdb_type, infoproperties=None):
+        infoproperties = infoproperties or {}
+        if tmdb_type == 'movie':
+            if item.get('belongs_to_collection'):
+                infoproperties['set.tmdb_id'] = item['belongs_to_collection'].get('id')
+                infoproperties['set.name'] = item['belongs_to_collection'].get('name')
+                infoproperties['set.poster'] = self.get_imagepath(item['belongs_to_collection'].get('poster_path'))
+                infoproperties['set.fanart'] = self.get_imagepath(item['belongs_to_collection'].get('backdrop_path'))
+            if item.get('budget'):
+                infoproperties['budget'] = '${:0,.0f}'.format(item['budget'])
+            if item.get('revenue'):
+                infoproperties['revenue'] = '${:0,.0f}'.format(item['revenue'])
+            if item.get('spoken_languages'):
+                infoproperties = utils.iter_props(
+                    item['spoken_languages'], 'language', infoproperties,
+                    name='name', iso='iso_639_1')
+            if item.get('keywords'):
+                infoproperties = utils.iter_props(
+                    item['keywords'], 'keyword', infoproperties,
+                    name='name', tmdb_id='id')
+            if item.get('reviews'):
+                infoproperties = utils.iter_props(
+                    item['reviews'], 'review', infoproperties,
+                    content='content', tmdb_id='id', author='author')
+        if tmdb_type == 'tv':
+            infoproperties['type'] = item.get('type')
+            if item.get('networks'):
+                infoproperties = utils.iter_props(
+                    item['networks'], 'studio', infoproperties,
+                    name='name', tmdb_id='id')
+                infoproperties = utils.iter_props(
+                    item['networks'], 'studio', infoproperties,
+                    icon='logo_path', func=self.get_imagepath)
+            if item.get('created_by'):
+                infoproperties = utils.iter_props(
+                    item['created_by'], 'creator', infoproperties,
+                    name='name', tmdb_id='id')
+                infoproperties = utils.iter_props(
+                    item['created_by'], 'creator', infoproperties,
+                    thumb='profile_path', func=self.get_imagepath)
+                infoproperties['creator'] = ' / '.join([i['name'] for i in item.get('created_by', []) if i.get('name')])
+            if item.get('last_episode_to_air'):
+                i = item.get('last_episode_to_air', {})
+                infoproperties['last_aired'] = utils.date_to_format(i.get('air_date'), xbmc.getRegion('dateshort'))
+                infoproperties['last_aired.long'] = utils.date_to_format(i.get('air_date'), xbmc.getRegion('datelong'))
+                infoproperties['last_aired.day'] = utils.date_to_format(i.get('air_date'), "%A")
+                infoproperties['last_aired.episode'] = i.get('episode_number')
+                infoproperties['last_aired.name'] = i.get('name')
+                infoproperties['last_aired.tmdb_id'] = i.get('id')
+                infoproperties['last_aired.plot'] = i.get('overview')
+                infoproperties['last_aired.season'] = i.get('season_number')
+                infoproperties['last_aired.rating'] = '{:0,.1f}'.format(utils.try_parse_float(i.get('vote_average')))
+                infoproperties['last_aired.votes'] = i.get('vote_count')
+                infoproperties['last_aired.thumb'] = self.get_imagepath(i.get('still_path'))
+            if item.get('next_episode_to_air'):
+                i = item.get('next_episode_to_air', {})
+                infoproperties['next_aired'] = utils.date_to_format(i.get('air_date'), xbmc.getRegion('dateshort'))
+                infoproperties['next_aired.long'] = utils.date_to_format(i.get('air_date'), xbmc.getRegion('datelong'))
+                infoproperties['next_aired.day'] = utils.date_to_format(i.get('air_date'), "%A")
+                infoproperties['next_aired.episode'] = i.get('episode_number')
+                infoproperties['next_aired.name'] = i.get('name')
+                infoproperties['next_aired.tmdb_id'] = i.get('id')
+                infoproperties['next_aired.plot'] = i.get('overview')
+                infoproperties['next_aired.season'] = i.get('season_number')
+                infoproperties['next_aired.thumb'] = self.get_imagepath(i.get('still_path'))
+        return infoproperties
+
+    def get_cast(self, item, cast=None):
+        cast = cast or []
+        if not item.get('credits') and not item.get('guest_stars'):
+            return cast
+        cast_item = None
+        cast_list = item.get('credits', {}).get('cast', []) + item.get('guest_stars', [])
+        for i in sorted(cast_list, key=lambda k: k.get('order', 0)):
+            if cast_item:
+                if cast_item.get('name') != i.get('name'):
+                    cast.append(cast_item)
+                    cast_item = None
+                elif i.get('character'):
+                    cast_item['role'] = '{} / {}'.format(cast_item.get('role'), i.get('character'))
+            if not cast_item:
+                cast_item = {
+                    'name': i.get('name'),
+                    'role': i.get('character'),
+                    'order': i.get('order'),
+                    'thumbnail': self.get_imagepath(i.get('profile_path'), poster=True) if i.get('profile_path') else ''}
+        if cast_item:
+            cast.append(cast_item)
+        return cast
 
     def get_art(self, item, art=None):
         art = art or {}
@@ -223,6 +318,7 @@ class TMDb(RequestAPI):
             base_item['unique_ids'] = self.get_unique_ids(item, base_item.get('unique_ids', {}))
             base_item['params'] = self.get_params(item, tmdb_type, base_item.get('params', {}))
             base_item['path'] = PLUGINPATH
+            base_item['cast'] = self.get_cast(item) or [] if detailed else []
         return base_item
 
     def _get_details_request(self, tmdb_type, tmdb_id, season=None, episode=None, cache_only=False, cache_refresh=False):
@@ -275,7 +371,7 @@ class TMDb(RequestAPI):
             base_item, cache_days=self.cache_long,
             cache_name='detailed.quick.item.{}.{}.{}.{}'.format(tmdb_type, tmdb_id, season, episode))
 
-    def get_seasons(self, tmdb_id):
+    def get_season_list(self, tmdb_id):
         request = self.get_request_sc('tv/{}'.format(tmdb_id))
         base_item = self.get_details('tv', tmdb_id)
         items = []
@@ -292,7 +388,7 @@ class TMDb(RequestAPI):
             items.append(item) if i.get('season_number') != 0 else items_end.append(item)
         return items + items_end
 
-    def get_episodes(self, tmdb_id, season):
+    def get_episode_list(self, tmdb_id, season):
         request = self.get_request_sc('tv/{}/season/{}'.format(tmdb_id, season))
         base_item = self.get_details('tv', tmdb_id, season=season)
         items = []
@@ -304,6 +400,33 @@ class TMDb(RequestAPI):
             item['params']['season'] = i.get('season_number')
             item['params']['episode'] = i.get('episode_number')
             items.append(item)
+        return items
+
+    def get_cast_list(self, tmdb_id, tmdb_type, key='cast'):
+        items = []
+        prev_item = {}
+        response = self.get_request_lc(tmdb_type, tmdb_id, 'credits')
+
+        # Avoid re-adding the same cast/crew member if multiple roles
+        # Instead merge infoproperties (ie roles / jobs / departments etc) together and make one item
+        prev_item = None
+        cast_list = response.get(key, []) if response else []
+        for i in cast_list:
+            this_item = self.get_info(i, 'person', detailed=False)
+            if prev_item and prev_item.get('label') != this_item.get('label'):
+                items.append(prev_item)
+            elif prev_item:
+                infoproperties = prev_item.get('infoproperties', {})
+                for k, v in this_item.get('infoproperties', {}).items():
+                    if not v:
+                        continue
+                    if not infoproperties.get(k):
+                        infoproperties[k] = v
+                    elif infoproperties.get(k) != v:
+                        infoproperties[k] = '{} / {}'.format(infoproperties[k], v)
+                this_item['infoproperties'] = infoproperties
+            prev_item = this_item
+        items.append(prev_item) if prev_item else None
         return items
 
     def get_search_list(self, tmdb_type, **kwargs):

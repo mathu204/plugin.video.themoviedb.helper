@@ -1,6 +1,7 @@
 import sys
 import xbmc
 import time
+import datetime
 from copy import copy
 from resources.lib.plugin import ADDON
 from contextlib import contextmanager
@@ -166,3 +167,49 @@ def del_empty_keys(d, values=[]):
 
 def find_dict_in_list(list_of_dicts, key, value):
     return [list_index for list_index, dic in enumerate(list_of_dicts) if dic.get(key) == value]
+
+
+def iter_props(items, property_name, infoproperties=None, func=None, **kwargs):
+    infoproperties = infoproperties or {}
+    if not items or not isinstance(items, list):
+        return infoproperties
+    for x, i in enumerate(items, start=1):
+        for k, v in kwargs.items():
+            infoproperties['{}.{}.{}'.format(property_name, x, k)] = func(i.get(v)) if func else i.get(v)
+        if x >= 10:
+            break
+    return infoproperties
+
+
+def date_to_format(time_str, str_fmt="%A", time_fmt="%Y-%m-%d", time_lim=10, utc_convert=False):
+    if not time_str:
+        return
+    time_obj = convert_timestamp(time_str, time_fmt, time_lim, utc_convert=utc_convert)
+    if not time_obj:
+        return
+    return time_obj.strftime(str_fmt)
+
+
+def convert_timestamp(time_str, time_fmt="%Y-%m-%dT%H:%M:%S", time_lim=19, utc_convert=False):
+    if not time_str:
+        return
+    time_str = time_str[:time_lim] if time_lim else time_str
+    utc_offset = 0
+    if utc_convert:
+        utc_offset = -time.timezone // 3600
+        utc_offset += 1 if time.localtime().tm_isdst > 0 else 0
+    try:
+        time_obj = datetime.datetime.strptime(time_str, time_fmt)
+        time_obj = time_obj + datetime.timedelta(hours=utc_offset)
+        return time_obj
+    except TypeError:
+        try:
+            time_obj = datetime.datetime(*(time.strptime(time_str, time_fmt)[0:6]))
+            time_obj = time_obj + datetime.timedelta(hours=utc_offset)
+            return time_obj
+        except Exception as exc:
+            kodi_log(exc, 1)
+            return
+    except Exception as exc:
+        kodi_log(exc, 1)
+        return

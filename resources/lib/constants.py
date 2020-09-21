@@ -36,14 +36,6 @@ TMDB_BASIC_LISTS = {
     'on_the_air': {
         'path': '{tmdb_type}/on_the_air',
         'key': 'results'},
-    'cast': {
-        'path': '{tmdb_type}/{tmdb_id}/credits',
-        'key': 'cast',
-        'tmdb_type': 'person'},
-    'crew': {
-        'path': '{tmdb_type}/{tmdb_id}/credits',
-        'key': 'crew',
-        'tmdb_type': 'person'},
     'recommendations': {
         'path': '{tmdb_type}/{tmdb_id}/recommendations',
         'key': 'results',

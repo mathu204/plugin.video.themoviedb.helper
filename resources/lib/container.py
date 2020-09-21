@@ -209,15 +209,25 @@ class Container(object):
         return items
 
     def list_seasons(self, tmdb_id, **kwargs):
-        items = TMDb().get_seasons(tmdb_id)
+        items = TMDb().get_season_list(tmdb_id)
         self.kodi_db = self.get_kodi_database('tv')
         self.container_content = plugin.convert_type('season', plugin.TYPE_CONTAINER)
         return items
 
     def list_episodes(self, tmdb_id, season, **kwargs):
-        items = TMDb().get_episodes(tmdb_id, season)
+        items = TMDb().get_episode_list(tmdb_id, season)
         self.kodi_db = self.get_kodi_database('tv')
         self.container_content = plugin.convert_type('episode', plugin.TYPE_CONTAINER)
+        return items
+
+    def list_cast(self, tmdb_id, tmdb_type, **kwargs):
+        items = TMDb().get_cast_list(tmdb_id, tmdb_type)
+        self.container_content = plugin.convert_type('person', plugin.TYPE_CONTAINER)
+        return items
+
+    def list_crew(self, tmdb_id, tmdb_type, **kwargs):
+        items = TMDb().get_cast_list(tmdb_id, tmdb_type, key='crew')
+        self.container_content = plugin.convert_type('person', plugin.TYPE_CONTAINER)
         return items
 
     def get_items_router(self, **kwargs):
@@ -229,7 +239,7 @@ class Container(object):
         if info == 'search':
             return self.list_search(**kwargs)
 
-        if kwargs.get('query') and not kwargs.get('tmdb_id'):
+        if not kwargs.get('tmdb_id'):
             kwargs['tmdb_id'] = TMDb().get_tmdb_id(**kwargs)
 
         if info == 'details':
@@ -238,6 +248,10 @@ class Container(object):
             return self.list_seasons(**kwargs)
         if info == 'episodes':
             return self.list_episodes(**kwargs)
+        if info == 'cast':
+            return self.list_cast(**kwargs)
+        if info == 'crew':
+            return self.list_crew(**kwargs)
         if info in constants.TMDB_BASIC_LISTS:
             return self.list_tmdb(**kwargs)
         return self.list_basedir(info)
