@@ -3,7 +3,7 @@ import xbmc
 import time
 import datetime
 from copy import copy
-from resources.lib.plugin import ADDON
+from resources.lib.plugin import ADDON, PLUGINPATH
 from contextlib import contextmanager
 try:
     from urllib.parse import urlencode, unquote_plus  # Py3
@@ -225,3 +225,9 @@ def age_difference(birthday, deathday=''):
         return age
     except Exception:
         return
+
+
+def get_url(path, **kwargs):
+    path = path or PLUGINPATH
+    paramstring = '?{}'.format(urlencode_params(**kwargs)) if kwargs else ''
+    return '{}{}'.format(path, paramstring)

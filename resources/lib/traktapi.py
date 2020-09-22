@@ -244,6 +244,13 @@ class TraktAPI(RequestAPI):
         index_z = len(items) if len(items) < index_z else index_z
         return {'items': items[index_a:index_z], 'pagecount': -(-len(items) // limit)}
 
+    def get_watched_progress(self, uid, hidden=False, specials=False, count_specials=False):
+        if not self.authorize() or not uid:
+            return
+        last_activity = self._get_sync_refresh_status('show', 'watched_at')
+        cache_refresh = True if last_activity else False
+        return self.get_request_lc('shows/{}/progress/watched'.format(uid), cache_refresh=cache_refresh)
+
     def _get_activity(self, activities, trakt_type=None, activity_type=None):
         if not activities:
             return

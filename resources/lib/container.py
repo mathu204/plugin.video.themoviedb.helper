@@ -57,7 +57,7 @@ class Container(object):
             listitem.set_playcount(playcount=listitem_utils.get_playcount_from_trakt(listitem))  # Quick because of agressive caching of Trakt object and pre-emptive dict comprehension
             listitem.set_standard_context_menu()
             listitem.set_unique_ids_to_infoproperties()
-            # listitem.set_params_info_reroute()  # Reroute details TODO: Add details route to context menu
+            listitem.set_params_info_reroute()  # Reroute details TODO: Add details route to context menu
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
                 url=listitem.get_url(),
@@ -220,13 +220,13 @@ class Container(object):
         self.container_content = plugin.convert_type('episode', plugin.TYPE_CONTAINER)
         return items
 
-    def list_cast(self, tmdb_id, tmdb_type, **kwargs):
-        items = TMDb().get_cast_list(tmdb_id, tmdb_type)
+    def list_cast(self, tmdb_id, tmdb_type, season=None, episode=None, **kwargs):
+        items = TMDb().get_cast_list(tmdb_id, tmdb_type, season=season, episode=episode)
         self.container_content = plugin.convert_type('person', plugin.TYPE_CONTAINER)
         return items
 
-    def list_crew(self, tmdb_id, tmdb_type, **kwargs):
-        items = TMDb().get_cast_list(tmdb_id, tmdb_type, key='crew')
+    def list_crew(self, tmdb_id, tmdb_type, season=None, episode=None, **kwargs):
+        items = TMDb().get_cast_list(tmdb_id, tmdb_type, season=season, episode=episode, keys=['crew'])
         self.container_content = plugin.convert_type('person', plugin.TYPE_CONTAINER)
         return items
 

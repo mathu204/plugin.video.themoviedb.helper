@@ -1183,6 +1183,11 @@ msgctxt "#32234"
 msgid "Refreshed details for {} ID {}"
 msgstr ""
 
+#: /resources/lib/listitem.py
+msgctxt "#32235"
+msgid "Browse related lists"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""

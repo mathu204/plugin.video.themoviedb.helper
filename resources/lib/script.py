@@ -6,6 +6,7 @@ import sys
 import xbmc
 import xbmcgui
 import resources.lib.utils as utils
+import resources.lib.plugin as plugin
 from resources.lib.fanarttv import FanartTV
 from resources.lib.tmdb import TMDb
 from resources.lib.plugin import ADDON
@@ -43,6 +44,32 @@ class Script(object):
         if choice == 1:
             return FanartTV().refresh_all_artwork(ftv_id=ftv_id, ftv_type=ftv_type)
 
+    def related_lists(self, tmdb_id=None, tmdb_type=None, season=None, episode=None, **kwargs):
+        if not tmdb_id or not tmdb_type:
+            return
+        if tmdb_type == 'movie':
+            items = plugin.get_basedir_details('movie')
+        elif tmdb_type == 'tv':
+            items = plugin.get_basedir_details('tv')
+        elif tmdb_type == 'person':
+            items = plugin.get_basedir_details('person')
+        else:
+            return
+        choice = xbmcgui.Dialog().contextmenu([i.get('label') for i in items])
+        if choice == -1:
+            return
+        item = items[choice]
+        params = item.get('params')
+        if not params:
+            return
+        params['tmdb_id'] = tmdb_id
+        params['tmdb_type'] = tmdb_type
+        params['season'] = season
+        params['episode'] = episode
+        path = 'Container.Update({})' if xbmc.getCondVisibility("Window.IsMedia") else 'ActivateWindow({})'
+        path = path.format(utils.get_url(path=item.get('path'), **params))
+        xbmc.executebuiltin(path)
+
     def refresh_details(self, tmdb_id=None, tmdb_type=None, season=None, episode=None, **kwargs):
         if not tmdb_id or not tmdb_type:
             return
@@ -59,3 +86,5 @@ class Script(object):
             return self.manage_artwork(**self.params)
         if self.params.get('refresh_details'):
             return self.refresh_details(**self.params)
+        if self.params.get('related_lists'):
+            return self.related_lists(**self.params)

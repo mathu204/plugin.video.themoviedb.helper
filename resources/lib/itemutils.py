@@ -89,13 +89,24 @@ class ItemUtils(object):
                 if j.get('number', -1) == episode:
                     return j.get('plays', 1)
 
-    def get_episode_watchedcount(self, seasons, season=None):
+    def _get_episode_watchedcount(self, seasons, season=None):
         count = 0
         for i in seasons:
             if season and i.get('number', -1) != season:
                 continue
             count += len(i.get('episodes', []))
         return count
+
+    def get_episode_watchedcount(self, uid=None, season=None, seasons=None):
+        watched_progress = self.trakt_api.get_watched_progress(uid=uid)
+        if not watched_progress:  # Get the old method of just counting
+            return self._get_episode_watchedcount(seasons=seasons, season=season), None
+        if season is None:
+            return watched_progress.get('completed'), watched_progress.get('aired')
+        for i in watched_progress.get('seasons', []):
+            if i.get('number', -1) == season:
+                return i.get('completed'), i.get('aired')
+        return None, None
 
     def get_playcount_from_trakt(self, listitem):
         if listitem.infolabels.get('mediatype') == 'movie':
@@ -109,10 +120,16 @@ class ItemUtils(object):
                 episode=listitem.infolabels.get('episode') or -2)
         if listitem.infolabels.get('mediatype') == 'tvshow':
             tmdb_id = utils.try_parse_int(listitem.unique_ids.get('tmdb'))
-            return self.get_episode_watchedcount(
+            count, total = self.get_episode_watchedcount(
+                uid=self.trakt_watched_tvshows.get(tmdb_id, {}).get('show', {}).get('ids', {}).get('slug'),
                 seasons=self.trakt_watched_tvshows.get(tmdb_id, {}).get('seasons', []))
+            listitem.infolabels['episode'] = total or listitem.infolabels.get('episode')
+            return count
         if listitem.infolabels.get('mediatype') == 'season':
             tmdb_id = utils.try_parse_int(listitem.unique_ids.get('tvshow.tmdb'))
-            return self.get_episode_watchedcount(
+            count, total = self.get_episode_watchedcount(
+                uid=self.trakt_watched_tvshows.get(tmdb_id, {}).get('show', {}).get('ids', {}).get('slug'),
                 seasons=self.trakt_watched_tvshows.get(tmdb_id, {}).get('seasons', []),
                 season=listitem.infolabels.get('season') or -2)
+            listitem.infolabels['episode'] = total or listitem.infolabels.get('episode')
+            return count

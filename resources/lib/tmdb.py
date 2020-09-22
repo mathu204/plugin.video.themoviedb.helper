@@ -406,6 +406,7 @@ class TMDb(RequestAPI):
         for i in request.get('episodes', []) if request else []:
             item = self.get_info(i, 'tv', base_item=base_item.copy())
             item['infolabels']['mediatype'] = 'episode'
+            item['unique_ids']['tvshow.tmdb'] = tmdb_id
             item['unique_ids']['tmdb'] = tmdb_id
             item['params']['tmdb_id'] = tmdb_id
             item['params']['season'] = i.get('season_number')
@@ -413,15 +414,24 @@ class TMDb(RequestAPI):
             items.append(item)
         return items
 
-    def get_cast_list(self, tmdb_id, tmdb_type, key='cast'):
+    def get_cast_list(self, tmdb_id, tmdb_type, season=None, episode=None, keys=['cast', 'guest_stars']):
         items = []
         prev_item = {}
-        response = self.get_request_lc(tmdb_type, tmdb_id, 'credits')
-
+        if season is not None and episode is not None:
+            affix = 'season/{}/episode/{}'.format(season, episode)
+        elif season is not None:
+            affix = 'season/{}'.format(season)
+        else:
+            affix = None
+        response = self.get_request_lc(tmdb_type, tmdb_id, affix, 'credits')
+        if not response:
+            return items
         # Avoid re-adding the same cast/crew member if multiple roles
         # Instead merge infoproperties (ie roles / jobs / departments etc) together and make one item
         prev_item = None
-        cast_list = response.get(key, []) if response else []
+        cast_list = []
+        for key in keys:
+            cast_list += response.get(key) or []
         for i in cast_list:
             this_item = self.get_info(i, 'person', detailed=False)
             if prev_item and prev_item.get('label') != this_item.get('label'):

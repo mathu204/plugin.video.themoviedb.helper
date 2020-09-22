@@ -1,6 +1,7 @@
 import xbmc
 import xbmcgui
 import resources.lib.utils as utils
+import resources.lib.plugin as plugin
 from resources.lib.plugin import ADDON, ADDONPATH, PLUGINPATH
 
 
@@ -67,27 +68,44 @@ class ListItem(object):
         if self.infolabels.get('mediatype') in ['season', 'episode']:
             return self.unique_ids.get('tvshow.tvdb')
 
+    def get_tmdb_id(self):
+        if self.infolabels.get('mediatype') in ['season', 'episode']:
+            return self.unique_ids.get('tvshow.tmdb')
+        return self.unique_ids.get('tmdb')
+
     def _context_item_get_ftv_artwork(self):
         ftv_id = self.get_ftv_id()
         ftv_type = self.get_ftv_type()
-        if ftv_type and ftv_id:
-            return [(
-                ADDON.getLocalizedString(32222),
-                'RunScript(plugin.video.themoviedb.helper,manage_artwork,ftv_type={},ftv_id={})'.format(ftv_type, ftv_id))]
-        return []
+        if not ftv_type or not ftv_id:
+            return []
+        path = 'manage_artwork,ftv_type={},ftv_id={}'.format(ftv_type, ftv_id)
+        return [(ADDON.getLocalizedString(32222), 'RunScript(plugin.video.themoviedb.helper,{})'.format(path))]
 
     def _context_item_refresh_details(self):
-        tmdb_id = self.unique_ids.get('tvshow.tmdb') or self.unique_ids.get('tmdb')
+        tmdb_id = self.get_tmdb_id()
         tmdb_type = self.get_tmdb_type()
-        if tmdb_type and tmdb_id:
-            return [(
-                ADDON.getLocalizedString(32233),
-                'RunScript(plugin.video.themoviedb.helper,refresh_details,tmdb_type={},tmdb_id={})'.format(tmdb_type, tmdb_id))]
-        return []
+        if not tmdb_type or not tmdb_id:
+            return []
+        path = 'refresh_details,tmdb_type={},tmdb_id={}'.format(tmdb_type, tmdb_id)
+        return [(ADDON.getLocalizedString(32233), 'RunScript(plugin.video.themoviedb.helper,{})'.format(path))]
+
+    def _context_item_related_lists(self):
+        if self.infolabels.get('mediatype') not in ['movie', 'tvshow', 'season', 'episode', 'actor']:
+            return []
+        tmdb_id = self.get_tmdb_id()
+        tmdb_type = self.get_tmdb_type()
+        if not tmdb_type or not tmdb_id:
+            return []
+        path = 'related_lists,tmdb_type={},tmdb_id={}'.format(tmdb_type, tmdb_id)
+        if self.infolabels.get('mediatype') == 'episode':
+            path = '{},season={}'.format(path, self.infolabels.get('season'))
+            path = '{},episode={}'.format(path, self.infolabels.get('episode'))
+        return [(ADDON.getLocalizedString(32235), 'RunScript(plugin.video.themoviedb.helper,{})'.format(path))]
 
     def set_standard_context_menu(self):
         self.context_menu += self._context_item_get_ftv_artwork()
         self.context_menu += self._context_item_refresh_details()
+        self.context_menu += self._context_item_related_lists()
         return self.context_menu
 
     def set_playcount(self, playcount):
@@ -134,8 +152,7 @@ class ListItem(object):
             self.infoproperties['{}_id'.format(k)] = v
 
     def get_url(self):
-        paramstring = '?{}'.format(utils.urlencode_params(**self.params)) if self.params else ''
-        return '{}{}'.format(self.path, paramstring)
+        return utils.get_url(self.path, **self.params)
 
     def get_listitem(self):
         listitem = xbmcgui.ListItem(label=self.label, label2=self.label2, path=self.get_url())
