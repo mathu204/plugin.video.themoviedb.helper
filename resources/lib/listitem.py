@@ -151,9 +151,6 @@ class ListItem(object):
             self.params['info'] = 'seasons'
         elif self.infolabels.get('mediatype') == 'season':
             self.params['info'] = 'episodes'
-        # else:
-        #     self.params['info'] = 'related'
-        #     self.is_folder = False
 
     def set_unique_ids_to_infoproperties(self):
         for k, v in self.unique_ids.items():

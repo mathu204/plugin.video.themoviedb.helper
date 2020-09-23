@@ -1188,6 +1188,11 @@ msgctxt "#32235"
 msgid "Browse related lists"
 msgstr ""
 
+#: /resources/lib/players.py
+msgctxt "#32236"
+msgid "Select Item"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""

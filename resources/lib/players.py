@@ -9,8 +9,9 @@ import resources.lib.utils as utils
 import resources.lib.constants as constants
 from resources.lib.tmdb import TMDb
 from resources.lib.listitem import ListItem
-from resources.lib.plugin import ADDON, PLUGINPATH
+from resources.lib.plugin import ADDON, PLUGINPATH, ADDONPATH
 from resources.lib.itemutils import ItemUtils
+from resources.lib.rpc import KodiLibrary
 from json import loads, dumps
 from string import Formatter
 from collections import defaultdict
@@ -61,8 +62,6 @@ class Players(object):
             self.details = self._get_item_details(tmdb_type, tmdb_id, season, episode)
             self.item = self._get_detailed_item(tmdb_type, tmdb_id, season, episode)
             self.dialog_players = self._get_players_for_dialog(tmdb_type)
-            self.is_folder = True
-            self.is_local = False
 
     def _check_assert(self, keys=[]):
         if not self.item:
@@ -77,20 +76,62 @@ class Players(object):
         return True  # Player passed the assert check
 
     def _get_built_player(self, file, mode, value=None):
-        name = ADDON.getLocalizedString(32061) if mode in ['play_movie', 'play_episode'] else xbmc.getLocalizedString(137)
         value = value or self.players.get(file) or {}
+        if mode in ['play_movie', 'play_episode']:
+            name = ADDON.getLocalizedString(32061)
+            is_folder = False
+        else:
+            name = xbmc.getLocalizedString(137)
+            is_folder = True
         return {
             'file': file, 'mode': mode,
+            'is_folder': is_folder,
             'name': '{} {}'.format(name, value.get('name')),
             'plugin_name': value.get('plugin'),
-            'plugin_icon': value.get('icon') or xbmcaddon.Addon(value.get('plugin', '')).getAddonInfo('icon'),
+            'plugin_icon': value.get('icon', '').format(ADDONPATH) or xbmcaddon.Addon(value.get('plugin', '')).getAddonInfo('icon'),
             'fallback': value.get('fallback', {}).get(mode),
             'actions': value.get(mode)}
+
+    def _get_local_item(self, tmdb_type):
+        file = self._get_local_movie() if tmdb_type == 'movie' else self._get_local_episode()
+        if not file:
+            return []
+        return [{
+            'name': '{} Kodi'.format(ADDON.getLocalizedString(32061)),
+            'is_folder': False,
+            'plugin_name': 'xbmc.core',
+            'plugin_icon': '{}/resources/icons/other/kodi.png'.format(ADDONPATH),
+            'actions': file}]
+
+    def _get_local_file(self, file):
+        if not file:
+            return
+        if file.endswith('.strm'):
+            contents = utils.read_file(file)
+            if contents.startswith('plugin://plugin.video.themoviedb.helper'):
+                return
+        return file
+
+    def _get_local_movie(self):
+        return self._get_local_file(KodiLibrary(dbtype='movie').get_info(
+            'file', fuzzy_match=False,
+            tmdb_id=self.item.get('tmdb'),
+            imdb_id=self.item.get('imdb')))
+
+    def _get_local_episode(self):
+        dbid = KodiLibrary(dbtype='tvshow').get_info(
+            'dbid', fuzzy_match=False,
+            tmdb_id=self.item.get('tmdb'),
+            tvdb_id=self.item.get('tvdb'),
+            imdb_id=self.item.get('imdb'))
+        return self._get_local_file(KodiLibrary(dbtype='episode', tvshowid=dbid).get_info(
+            'file', season=self.item.get('season'), episode=self.item.get('episode')))
 
     def _get_players_for_dialog(self, tmdb_type):
         if tmdb_type not in ['movie', 'tv']:
             return []
-        dialog_play, dialog_search = [], []
+        dialog_play = self._get_local_item(tmdb_type)
+        dialog_search = []
         for k, v in sorted(self.players.items(), key=lambda i: utils.try_parse_int(i[1].get('priority')) or 1000):
             if tmdb_type == 'movie':
                 if v.get('play_movie') and self._check_assert(v.get('assert', {}).get('play_movie', [])):
@@ -208,6 +249,7 @@ class Players(object):
                 return player
 
     def _get_path_from_rules(self, folder, action):
+        """ Returns tuple of (path, is_folder) """
         for x, f in enumerate(folder):
             for k, v in action.items():  # Iterate through our key (infolabel) / value (infolabel must match) pairs of our action
                 if k == 'position':  # We're looking for an item position not an infolabel
@@ -217,16 +259,73 @@ class Players(object):
                     break  # Item's key value doesn't match value we are looking for so let's got to next item in folder
             else:  # Item matched our criteria so let's return it
                 if f.get('file'):
-                    if f.get('filetype') == 'file':
-                        self.is_folder = False  # Set false for files so we can play
-                    return f.get('file')  # Get ListItem.FolderPath for item and return as player
+                    is_folder = False if f.get('filetype') == 'file' else True  # Set false for files so we can play
+                    return (f.get('file'), is_folder)   # Get ListItem.FolderPath for item and return as player
 
-    def _get_path_from_actions(self, actions):
+    def _player_dialog_select(self, folder, auto=False):
+        d_items = []
+        for f in folder:
+
+            # Skip items without labels as probably not worth playing
+            if not f.get('label') or f.get('label') == 'None':
+                continue
+
+            # Get the label of the item
+            label_a = f.get('label')
+
+            # Add year to our label if exists and not special value of 1601
+            if f.get('year') and f.get('year') != 1601:
+                label_a = u'{} ({})'.format(label_a, f.get('year'))
+
+            # Add season and episode numbers to label
+            if utils.try_parse_int(f.get('season', 0)) > 0 and utils.try_parse_int(f.get('episode', 0)) > 0:
+                label_a = u'{}x{}. {}'.format(f.get('season'), f.get('episode'), label_a)
+
+            # Add various stream details to ListItem.Label2 (aka label_b)
+            label_b_list = []
+            if f.get('streamdetails'):
+                sdv_list = f.get('streamdetails', {}).get('video', [{}]) or [{}]
+                sda_list = f.get('streamdetails', {}).get('audio', [{}]) or [{}]
+                sdv, sda = sdv_list[0], sda_list[0]
+                if sdv.get('width') or sdv.get('height'):
+                    label_b_list.append(u'{}x{}'.format(sdv.get('width'), sdv.get('height')))
+                if sdv.get('codec'):
+                    label_b_list.append(u'{}'.format(sdv.get('codec', '').upper()))
+                if sda.get('codec'):
+                    label_b_list.append(u'{}'.format(sda.get('codec', '').upper()))
+                if sda.get('channels'):
+                    label_b_list.append(u'{} CH'.format(sda.get('channels', '')))
+                for i in sda_list:
+                    if i.get('language'):
+                        label_b_list.append(u'{}'.format(i.get('language', '').upper()))
+                if sdv.get('duration'):
+                    label_b_list.append(u'{} mins'.format(utils.try_parse_int(sdv.get('duration', 0)) // 60))
+            if f.get('size'):
+                label_b_list.append(u'{}'.format(utils.normalise_filesize(f.get('size', 0))))
+            label_b = ' | '.join(label_b_list) if label_b_list else ''
+
+            # Add item to select dialog list
+            d_items.append(ListItem(label=label_a, label2=label_b, art={'thumb': f.get('thumbnail')}).get_listitem())
+
+        if not d_items:
+            return -1  # No items so ask user to select new player
+
+        # If autoselect enabled and only 1 item choose that otherwise ask user to choose
+        idx = 0 if auto and len(d_items) == 1 else xbmcgui.Dialog().select(ADDON.getLocalizedString(32236), d_items, useDetails=True)
+
+        if idx == -1:
+            return  # User exited the dialog so return nothing
+
+        is_folder = False if folder[idx].get('filetype') == 'file' else True
+        return (folder[idx].get('file'), is_folder)  # Return the player
+
+    def _get_path_from_actions(self, actions, is_folder=True):
+        """ Returns tuple of (path, is_folder) """
         keyboard_input = None
-        path = actions[0]
+        path = (actions[0], is_folder)
         for action in actions[1:]:
             # Check if we've got a playable item already
-            if not self.is_folder:
+            if not is_folder:
                 return path
 
             # Start thread with keyboard inputter if needed
@@ -241,17 +340,17 @@ class Players(object):
 
             # Get the next folder from the plugin
             with utils.busy_dialog():
-                folder = rpc.get_directory(string_format_map(path, self.item))
+                folder = rpc.get_directory(string_format_map(path[0], self.item))
 
             # Kill our keyboard inputter thread
             if keyboard_input:
                 keyboard_input.exit = True
                 keyboard_input = None
 
-            # Special option to show dialog of items to select from TODO!!
+            # Special option to show dialog of items to select
             if action.get('dialog'):
                 auto = True if action.get('dialog', '').lower() == 'auto' else False
-                return self.player_dialogselect(folder, auto=auto)
+                return self._player_dialog_select(folder, auto=auto)
 
             # Apply the rules for the current action and grab the path
             path = self._get_path_from_rules(folder, action)
@@ -260,6 +359,7 @@ class Players(object):
         return path
 
     def _get_path_from_player(self, player=None):
+        """ Returns tuple of (path, is_folder) """
         if not player or not isinstance(player, dict):
             return
         actions = player.get('actions')
@@ -268,10 +368,9 @@ class Players(object):
         if isinstance(actions, list):
             return self._get_path_from_actions(actions)
         if isinstance(actions, unicode) or isinstance(actions, str):
-            return string_format_map(actions, self.item)  # Single path so return it formatted
+            return (string_format_map(actions, self.item), player.get('is_folder', False))  # Single path so return it formatted
 
     def _get_resolved_path(self, player=None):
-        path = None
         player = player or self._select_player()
         if not player:
             return
@@ -289,46 +388,65 @@ class Players(object):
         xbmcgui.Window(10000).clearProperty('TMDbHelper.PlayerInfoString')
         path = self._get_resolved_path()
         if return_listitem:
-            self.details.path = path
+            self.details.path = path[0] if path else None
             self.details.params = {}
+            self.details.infoproperties['is_folder'] = 'false' if path and not path[1] else 'true'
             path = self.details.get_listitem()
         return path
 
-    def play(self):
+    def _update_listing_hack(self, folder_path=None, reset_focus=None):
+        """
+        Some plugins use container.update after search results to rewrite path history
+        This is a quick hack to rewrite the path back to our original path before updating
+        """
+        if not folder_path or xbmc.getInfoLabel("Container.FolderPath") == folder_path:
+            return
+        xbmc.executebuiltin('Container.Update({},replace)'.format(folder_path))
+        if not reset_focus:
+            return
+        with utils.busy_dialog():
+            timeout = 20
+            while not xbmc.Monitor().abortRequested() and xbmc.getInfoLabel("Container.FolderPath") != folder_path and timeout > 0:
+                xbmc.Monitor().waitForAbort(0.25)
+                timeout -= 1
+            xbmc.executebuiltin(reset_focus)
+            xbmc.Monitor().waitForAbort(0.5)
+
+    def play(self, folder_path=None, reset_focus=None):
         # Get some info about current container for container update hack
-        folder_path = xbmc.getInfoLabel("Container.FolderPath")
-        current_pos = xbmc.getInfoLabel("Container.CurrentItem")
-        containerid = xbmc.getInfoLabel("System.CurrentControlID")
+        if not folder_path:
+            folder_path = xbmc.getInfoLabel("Container.FolderPath")
+        if not reset_focus and folder_path:
+            containerid = xbmc.getInfoLabel("System.CurrentControlID")
+            current_pos = xbmc.getInfoLabel("Container({}).CurrentItem".format(containerid))
+            reset_focus = 'SetFocus({},{},absolute)'.format(containerid, utils.try_parse_int(current_pos) - 1)
 
         # Get the resoved path
         listitem = self.get_resolved_path()
         path = listitem.getPath()
+        is_folder = True if listitem.getProperty('is_folder') == 'true' else False
 
-        # Some plugins use container.update after search results to rewrite path history
-        # This is a quick hack to rewrite the path back to our original path
-        if folder_path and xbmc.getInfoLabel("Container.FolderPath") != folder_path:
-            xbmc.executebuiltin('Container.Update({}&update_listing=true)'.format(folder_path))
-            xbmc.executebuiltin('SetFocus({},{},absolute)'.format(containerid, current_pos))
+        # Reset folder hack
+        self._update_listing_hack(folder_path=folder_path, reset_focus=reset_focus)
 
         # Check we have an actual path to open
         if not path or path == PLUGINPATH:
             return
 
-        # Kodi DB and strm files need to play with PlayMedia() to resolve properly
+        # Strm files need to play with PlayMedia() to resolve properly
         # PlayMedia() will crash Kodi if external addon doesn't resolve directly to playable file so send to player instead
         # Returning path to Container and using setResolvedUrl is also not possible because external addon might not resolve
-        # Not sure if method exists to determine if path returned from JSON RPC will be a resolvable one?
-        # Maybe the isPlayable property flag can be checked?
         action = None
-        if not self.is_folder and (self.is_local or path.endswith('.strm')):
+        if not is_folder and path.endswith('.strm'):
             action = u'PlayMedia(\"{0}\")'.format(path)
-        elif self.is_folder and xbmc.getCondVisibility("Window.IsMedia"):
+        elif is_folder and xbmc.getCondVisibility("Window.IsMedia"):
             action = u'Container.Update({0})'.format(path)
-        elif self.is_folder:
+        elif is_folder:
             action = u'ActivateWindow(videos,{0},return)'.format(path)
+
         if action:
             xbmc.executebuiltin(utils.try_encode_string(utils.try_decode_string(action)))
-        elif not self.is_folder:
+        if not action and not is_folder:
             xbmc.Player().play(path, listitem)
 
         return path

@@ -22,7 +22,7 @@ class Container(object):
         self.paramstring = utils.try_decode_string(sys.argv[2][1:])
         self.params = utils.parse_paramstring(sys.argv[2][1:])
         self.allow_pagination = True
-        self.update_listing = True if self.params.pop('update_listing', False) else False
+        self.update_listing = False
         self.plugin_category = ''
         self.container_content = ''
         self.container_update = None
@@ -147,7 +147,7 @@ class Container(object):
             'label': '{} {}'.format(xbmc.getLocalizedString(137), plugin.convert_type(tmdb_type, plugin.TYPE_PLURAL)),
             'art': {'thumb': '{}/resources/icons/tmdb/search.png'.format(ADDONPATH)},
             'infoproperties': {'specialsort': 'top'},
-            'params': utils.merge_two_dicts(kwargs, {'info': 'search'})}
+            'params': utils.merge_two_dicts(kwargs, {'info': 'search', 'tmdb_type': tmdb_type})}
         items = []
         items.append(base_item)
 
@@ -292,7 +292,7 @@ class Container(object):
     def play_external(self, **kwargs):
         if not self.params.get('tmdb_id'):
             self.params['tmdb_id'] = TMDb().get_tmdb_id(**self.params)
-        return Players(**self.params).play()
+        Players(**self.params).play()
 
     def router(self):
         if self.params.get('info') == 'play':
