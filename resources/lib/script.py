@@ -9,13 +9,10 @@ import resources.lib.utils as utils
 import resources.lib.plugin as plugin
 from resources.lib.fanarttv import FanartTV
 from resources.lib.tmdb import TMDb
-from resources.lib.plugin import ADDON
+from resources.lib.plugin import ADDON, PLUGINPATH
 
 
 class Script(object):
-    def __init__(self):
-        self.params = self.get_params()
-
     def get_params(self):
         params = {}
         for arg in sys.argv:
@@ -44,13 +41,25 @@ class Script(object):
         if choice == 1:
             return FanartTV().refresh_all_artwork(ftv_id=ftv_id, ftv_type=ftv_type)
 
-    def related_lists(self, tmdb_id=None, tmdb_type=None, season=None, episode=None, **kwargs):
+    def related_lists(self, tmdb_id=None, tmdb_type=None, season=None, episode=None, container_update=True, **kwargs):
         if not tmdb_id or not tmdb_type:
             return
         if tmdb_type == 'movie':
-            items = plugin.get_basedir_details('movie')
+            items = [{'label': 'Play', 'path': PLUGINPATH, 'params': {
+                'info': 'play', 'tmdb_id': tmdb_id, 'tmdb_type': tmdb_type}}]
+            items += plugin.get_basedir_details('movie')
+        elif tmdb_type == 'tv' and season is not None and episode is not None:
+            items = [{'label': 'Play', 'path': PLUGINPATH, 'params': {
+                'info': 'play', 'tmdb_id': tmdb_id, 'tmdb_type': tmdb_type, 'season': season, 'episode': episode}}]
+            items += plugin.get_basedir_details('tv')
+        elif tmdb_type == 'tv' and season is not None:
+            items = [{'label': 'Browse', 'path': PLUGINPATH, 'params': {
+                'info': 'episodes', 'tmdb_id': tmdb_id, 'tmdb_type': tmdb_type, 'season': season}}]
+            items += plugin.get_basedir_details('tv')
         elif tmdb_type == 'tv':
-            items = plugin.get_basedir_details('tv')
+            items = [{'label': 'Browse', 'path': PLUGINPATH, 'params': {
+                'info': 'seasons', 'tmdb_id': tmdb_id, 'tmdb_type': tmdb_type}}]
+            items += plugin.get_basedir_details('tv')
         elif tmdb_type == 'person':
             items = plugin.get_basedir_details('person')
         else:
@@ -62,12 +71,16 @@ class Script(object):
         params = item.get('params')
         if not params:
             return
-        params['tmdb_id'] = tmdb_id
-        params['tmdb_type'] = tmdb_type
-        params['season'] = season
-        params['episode'] = episode
-        path = 'Container.Update({})' if xbmc.getCondVisibility("Window.IsMedia") else 'ActivateWindow({})'
-        path = path.format(utils.get_url(path=item.get('path'), **params))
+        item['params']['tmdb_id'] = tmdb_id
+        item['params']['tmdb_type'] = tmdb_type
+        if season is not None:
+            item['params']['season'] = season
+            if episode is not None:
+                item['params']['episode'] = episode
+        if not container_update:
+            return item
+        path = 'Container.Update({})' if xbmc.getCondVisibility("Window.IsMedia") else 'ActivateWindow(videos,{},return)'
+        path = path.format(utils.get_url(path=item.get('path'), **item.get('params')))
         xbmc.executebuiltin(path)
 
     def refresh_details(self, tmdb_id=None, tmdb_type=None, season=None, episode=None, **kwargs):
@@ -80,6 +93,7 @@ class Script(object):
             xbmc.executebuiltin('Container.Refresh')
 
     def router(self):
+        self.params = self.get_params()
         if not self.params:
             return
         if self.params.get('manage_artwork'):

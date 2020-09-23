@@ -11,6 +11,14 @@ LANGUAGES = [
     'sr-RS', 'sv-SE', 'ta-IN', 'te-IN', 'th-TH', 'tl-PH', 'tr-TR', 'uk-UA', 'vi-VN', 'zh-CN', 'zh-HK',
     'zh-TW', 'zu-ZA']
 
+PLAYERS_URLENCODE = [
+    'name', 'showname', 'clearname', 'tvshowtitle', 'title', 'thumbnail', 'poster', 'fanart',
+    'originaltitle', 'plot', 'cast', 'actors']
+
+PLAYERS_BASEDIR_USER = 'special://profile/addon_data/plugin.video.themoviedb.helper/players/'
+
+PLAYERS_BASEDIR_BUNDLED = 'special://home/addons/plugin.video.themoviedb.helper/resources/players/'
+
 TMDB_BASIC_LISTS = {
     'popular': {
         'path': '{tmdb_type}/popular',
@@ -71,4 +79,19 @@ TMDB_BASIC_LISTS = {
     'videos': {
         'path': '{tmdb_type}/{tmdb_id}/videos',
         'key': 'results',
-        'tmdb_type': 'video'}}
+        'tmdb_type': 'video'},
+    'posters': {
+        'path': '{tmdb_type}/{tmdb_id}/images',
+        'key': 'posters',
+        'tmdb_type': 'image'},
+    'fanart': {
+        'path': '{tmdb_type}/{tmdb_id}/images',
+        'key': 'backdrops',
+        'tmdb_type': 'image'},
+    'movie_keywords': {
+        'path': 'movie/{tmdb_id}/keywords',
+        'key': 'keywords',
+        'tmdb_type': 'keyword'},
+    'reviews': {
+        'path': '{tmdb_type}/{tmdb_id}/reviews',
+        'key': 'results'}}

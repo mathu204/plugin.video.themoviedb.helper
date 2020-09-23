@@ -6,4 +6,4 @@ from resources.lib.container import Container
 
 
 if __name__ == '__main__':
-    Container().get_directory()
+    Container().router()

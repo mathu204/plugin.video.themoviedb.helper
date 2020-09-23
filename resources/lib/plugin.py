@@ -13,6 +13,7 @@ TYPE_PLURAL = 1
 TYPE_CONTAINER = 2
 TYPE_TRAKT = 3
 TYPE_DB = 4
+TYPE_LIBRARY = 5
 
 
 def get_language():
@@ -101,6 +102,11 @@ def convert_type(tmdb_type, output, season=None, episode=None):
         elif tmdb_type == 'episode':
             return 'episode'
         elif tmdb_type == 'video':
+            return 'video'
+    elif output == TYPE_LIBRARY:
+        if tmdb_type == 'image':
+            return 'pictures'
+        else:
             return 'video'
     return ''
 
@@ -263,7 +269,7 @@ def basedir_details():
             'params': {'info': 'trakt_inlists'},
             'path': PLUGINPATH,
             'art': {'thumb': '{}/resources/icons/tmdb/trakt.png'.format(ADDONPATH)},
-            'types': ['movie', 'tv']}]
+            'types': ['null']}]
 
 
 def basedir_trakt():

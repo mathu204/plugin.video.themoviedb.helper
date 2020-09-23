@@ -1,7 +1,6 @@
 import xbmc
 import xbmcgui
 import resources.lib.utils as utils
-import resources.lib.plugin as plugin
 from resources.lib.plugin import ADDON, ADDONPATH, PLUGINPATH
 
 
@@ -90,8 +89,6 @@ class ListItem(object):
         return [(ADDON.getLocalizedString(32233), 'RunScript(plugin.video.themoviedb.helper,{})'.format(path))]
 
     def _context_item_related_lists(self):
-        if self.infolabels.get('mediatype') not in ['movie', 'tvshow', 'season', 'episode', 'actor']:
-            return []
         tmdb_id = self.get_tmdb_id()
         tmdb_type = self.get_tmdb_type()
         if not tmdb_type or not tmdb_id:
@@ -103,9 +100,9 @@ class ListItem(object):
         return [(ADDON.getLocalizedString(32235), 'RunScript(plugin.video.themoviedb.helper,{})'.format(path))]
 
     def set_standard_context_menu(self):
+        self.context_menu += self._context_item_related_lists()
         self.context_menu += self._context_item_get_ftv_artwork()
         self.context_menu += self._context_item_refresh_details()
-        self.context_menu += self._context_item_related_lists()
         return self.context_menu
 
     def set_playcount(self, playcount):
@@ -137,13 +134,26 @@ class ListItem(object):
     def set_params_info_reroute(self):
         if self.params.get('info') != 'details':
             return
-        if self.infolabels.get('mediatype') in ['movie', 'episode', 'video']:
+        if self.infoproperties.get('tmdb_type') == 'keyword':
+            self.params['info'] = 'discover'
+            self.params['with_keywords'] = self.params.pop('tmdb_id', '')
+            self.params['tmdb_type'] = 'movie'
+            self.params['with_id'] = 'True'
+        elif self.infoproperties.get('tmdb_type') == 'person':
+            self.params['info'] = 'related'
+            self.params['tmdb_type'] = 'person'
+            self.params['tmdb_id'] = self.unique_ids.get('tmdb')
+            self.is_folder = False
+        elif self.infolabels.get('mediatype') in ['movie', 'episode', 'video']:
             self.params['info'] = 'play'
             self.is_folder = False
         elif self.infolabels.get('mediatype') == 'tvshow':
             self.params['info'] = 'seasons'
         elif self.infolabels.get('mediatype') == 'season':
             self.params['info'] = 'episodes'
+        # else:
+        #     self.params['info'] = 'related'
+        #     self.is_folder = False
 
     def set_unique_ids_to_infoproperties(self):
         for k, v in self.unique_ids.items():

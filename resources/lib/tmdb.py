@@ -343,7 +343,7 @@ class TMDb(RequestAPI):
             append_to_response=self.append_to_response,
             cache_only=cache_only, cache_refresh=cache_refresh) or {}
 
-    def get_details(self, tmdb_type, tmdb_id, season=None, episode=None, cache_only=False, cache_refresh=False):
+    def get_details(self, tmdb_type, tmdb_id, season=None, episode=None, cache_only=False, cache_refresh=False, **kwargs):
         if not tmdb_id or not tmdb_type:
             return
 
@@ -462,6 +462,12 @@ class TMDb(RequestAPI):
         if utils.try_parse_int(response.get('page', 0)) < utils.try_parse_int(response.get('total_pages', 0)):
             items.append({'next_page': utils.try_parse_int(response.get('page', 0)) + 1})
         return items
+
+    def get_discover_list(self, tmdb_type, with_id=True, with_separator='AND', **kwargs):
+        # TODO: Add with_id=False look-ups and with_separator translations
+        # TODO: Check what regions etc we need to have
+        path = 'discover/{}'.format(tmdb_type)
+        return self.get_basic_list(path, tmdb_type, **kwargs)
 
     def get_request_sc(self, *args, **kwargs):
         """ Get API request using the short cache """

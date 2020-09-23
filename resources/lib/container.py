@@ -7,10 +7,12 @@ import resources.lib.cache as cache
 import resources.lib.plugin as plugin
 import resources.lib.constants as constants
 import resources.lib.rpc as rpc
+from resources.lib.script import Script
 from resources.lib.listitem import ListItem
 from resources.lib.tmdb import TMDb
 from resources.lib.fanarttv import FanartTV
 from resources.lib.itemutils import ItemUtils
+from resources.lib.players import Players
 from resources.lib.plugin import ADDONPATH, ADDON, PLUGINPATH
 
 
@@ -20,13 +22,14 @@ class Container(object):
         self.paramstring = utils.try_decode_string(sys.argv[2][1:])
         self.params = utils.parse_paramstring(sys.argv[2][1:])
         self.allow_pagination = True
-        self.update_listing = False
+        self.update_listing = True if self.params.pop('update_listing', False) else False
         self.plugin_category = ''
         self.container_content = ''
         self.container_update = None
         self.container_refresh = False
         self.item_type = None
         self.kodi_db = None
+        self.library = None
         self.ftv_lookup = ADDON.getSettingBool('fanarttv_lookup')
         self.ftv_widget_lookup = ADDON.getSettingBool('widget_fanarttv_lookup')
         self.is_widget = True if self.params.get('widget') else False
@@ -53,11 +56,11 @@ class Container(object):
             listitem.set_details(details=listitem_utils.get_tmdb_details(listitem))  # Quick because only get cached
             listitem.set_details(details=listitem_utils.get_ftv_details(listitem), reverse=True)  # Slow when not cache only
             listitem.set_details(details=listitem_utils.get_kodi_details(listitem), reverse=True)  # Quick because local db
-            # listitem.set_details(details=listitem_utils.get_external_ids(listitem))  # Slow first time
+            # listitem.set_details(details=listitem_utils.get_external_ids(listitem))  # Too slow for return on value
             listitem.set_playcount(playcount=listitem_utils.get_playcount_from_trakt(listitem))  # Quick because of agressive caching of Trakt object and pre-emptive dict comprehension
-            listitem.set_standard_context_menu()
-            listitem.set_unique_ids_to_infoproperties()
-            listitem.set_params_info_reroute()  # Reroute details TODO: Add details route to context menu
+            listitem.set_standard_context_menu()  # Set the context menu items
+            listitem.set_unique_ids_to_infoproperties()  # Add unique ids to properties so accessible in skins
+            listitem.set_params_info_reroute()  # Reroute details to proper end point
             xbmcplugin.addDirectoryItem(
                 handle=self.handle,
                 url=listitem.get_url(),
@@ -205,6 +208,7 @@ class Container(object):
             key=info_model.get('key', 'results'),
             page=page)
         self.kodi_db = self.get_kodi_database(info_tmdb_type)
+        self.library = plugin.convert_type(info_tmdb_type, plugin.TYPE_LIBRARY)
         self.container_content = plugin.convert_type(info_tmdb_type, plugin.TYPE_CONTAINER)
         return items
 
@@ -230,7 +234,17 @@ class Container(object):
         self.container_content = plugin.convert_type('person', plugin.TYPE_CONTAINER)
         return items
 
-    def get_items_router(self, **kwargs):
+    def list_discover(self, tmdb_type, **kwargs):
+        items = TMDb().get_discover_list(tmdb_type, **kwargs)
+        self.kodi_db = self.get_kodi_database(tmdb_type)
+        self.library = plugin.convert_type(tmdb_type, plugin.TYPE_LIBRARY)
+        self.container_content = plugin.convert_type(tmdb_type, plugin.TYPE_CONTAINER)
+        return items
+
+    def list_related(self, tmdb_id, tmdb_type, season=None, episode=None, **kwargs):
+        Script().related_lists(tmdb_id=tmdb_id, tmdb_type=tmdb_type, season=season, episode=episode, container_update=True)
+
+    def get_items(self, **kwargs):
         info = kwargs.get('info')
         if info == 'pass':
             return
@@ -238,12 +252,16 @@ class Container(object):
             return self.list_searchdir_router(**kwargs)
         if info == 'search':
             return self.list_search(**kwargs)
+        if info == 'discover':
+            return self.list_discover(**kwargs)
 
         if not kwargs.get('tmdb_id'):
             kwargs['tmdb_id'] = TMDb().get_tmdb_id(**kwargs)
 
         if info == 'details':
             return self.list_details(**kwargs)
+        if info == 'related':
+            return self.list_related(**kwargs)
         if info == 'seasons':
             return self.list_seasons(**kwargs)
         if info == 'episodes':
@@ -257,7 +275,7 @@ class Container(object):
         return self.list_basedir(info)
 
     def get_directory(self):
-        items = self.get_items_router(**self.params)
+        items = self.get_items(**self.params)
         if not items:
             return
         self.add_items(items, allow_pagination=self.allow_pagination, parent_params=self.params, kodi_db=self.kodi_db)
@@ -270,3 +288,13 @@ class Container(object):
             xbmc.executebuiltin('Container.Update({})'.format(self.container_update))
         if self.container_refresh:
             xbmc.executebuiltin('Container.Refresh')
+
+    def play_external(self, **kwargs):
+        if not self.params.get('tmdb_id'):
+            self.params['tmdb_id'] = TMDb().get_tmdb_id(**self.params)
+        return Players(**self.params).play()
+
+    def router(self):
+        if self.params.get('info') == 'play':
+            return self.play_external()
+        return self.get_directory()

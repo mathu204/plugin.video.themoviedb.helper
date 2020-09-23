@@ -223,8 +223,8 @@ class TraktAPI(RequestAPI):
         trakt_type: movie, show, episode, person, list
         output_type: trakt, slug, imdb, tmdb, tvdb
         """
-        cache.use_cache(
-            self._get_id, id_type, unique_id, trakt_type=None, output_type=None,
+        return cache.use_cache(
+            self._get_id, id_type, unique_id, trakt_type=trakt_type, output_type=output_type,
             cache_name='trakt_get_id.{}.{}.{}.{}'.format(id_type, unique_id, trakt_type, output_type),
             cache_days=self.cache_long)
 

@@ -1,6 +1,8 @@
+import re
 import sys
 import xbmc
 import time
+import xbmcvfs
 import datetime
 from copy import copy
 from resources.lib.plugin import ADDON, PLUGINPATH
@@ -231,3 +233,17 @@ def get_url(path, **kwargs):
     path = path or PLUGINPATH
     paramstring = '?{}'.format(urlencode_params(**kwargs)) if kwargs else ''
     return '{}{}'.format(path, paramstring)
+
+
+def get_files_in_folder(folder, regex):
+    return [x for x in xbmcvfs.listdir(folder)[1] if re.match(regex, x)]
+
+
+def read_file(filepath):
+    vfs_file = xbmcvfs.File(filepath)
+    content = ''
+    try:
+        content = vfs_file.read()
+    finally:
+        vfs_file.close()
+    return content
