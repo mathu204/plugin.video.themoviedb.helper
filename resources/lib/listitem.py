@@ -134,12 +134,7 @@ class ListItem(object):
     def set_params_info_reroute(self):
         if self.params.get('info') != 'details':
             return
-        if self.infoproperties.get('tmdb_type') == 'keyword':
-            self.params['info'] = 'discover'
-            self.params['with_keywords'] = self.params.pop('tmdb_id', '')
-            self.params['tmdb_type'] = 'movie'
-            self.params['with_id'] = 'True'
-        elif self.infoproperties.get('tmdb_type') == 'person':
+        if self.infoproperties.get('tmdb_type') == 'person':
             self.params['info'] = 'related'
             self.params['tmdb_type'] = 'person'
             self.params['tmdb_id'] = self.unique_ids.get('tmdb')
@@ -151,6 +146,8 @@ class ListItem(object):
             self.params['info'] = 'seasons'
         elif self.infolabels.get('mediatype') == 'season':
             self.params['info'] = 'episodes'
+        elif self.infolabels.get('mediatype') == 'set':
+            self.params['info'] = 'collection'
 
     def set_unique_ids_to_infoproperties(self):
         for k, v in self.unique_ids.items():

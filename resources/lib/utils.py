@@ -1,16 +1,22 @@
 import re
+import os
 import sys
 import xbmc
 import time
+import xbmcgui
 import xbmcvfs
 import datetime
 from copy import copy
-from resources.lib.plugin import ADDON, PLUGINPATH
+from resources.lib.plugin import ADDON, PLUGINPATH, ADDONDATA
 from contextlib import contextmanager
 try:
     from urllib.parse import urlencode, unquote_plus  # Py3
 except ImportError:
     from urllib import urlencode, unquote_plus
+try:
+    import cPickle as _pickle
+except ImportError:
+    import pickle as _pickle  # Newer versions of Py3 just use pickle
 
 
 _addonlogname = '[plugin.video.themoviedb.helper]\n'
@@ -43,12 +49,12 @@ def kodi_log(value, level=0):
         xbmc.log(u'Logging Error: {}'.format(exc), level=xbmc.LOGNOTICE)
 
 
-def try_parse_int(string, base=None):
+def try_parse_int(string, base=None, fallback=0):
     '''helper to parse int from string without erroring on empty or misformed string'''
     try:
         return int(string, base) if base else int(string)
     except Exception:
-        return 0
+        return fallback
 
 
 def try_parse_float(string):
@@ -247,3 +253,57 @@ def read_file(filepath):
     finally:
         vfs_file.close()
     return content
+
+
+def _get_pickle_path():
+    main_dir = os.path.join(xbmc.translatePath(ADDONDATA), 'pickle')
+    if not os.path.exists(main_dir):
+        os.makedirs(main_dir)
+    return main_dir
+
+
+def set_pickle(my_object, pickle_name):
+    if not my_object or not pickle_name:
+        return
+    with open(os.path.join(_get_pickle_path(), pickle_name), 'wb') as file:
+        _pickle.dump(my_object, file)
+    return my_object
+
+
+def get_pickle(pickle_name):
+    if not pickle_name:
+        return
+    try:
+        with open(os.path.join(_get_pickle_path(), pickle_name), 'rb') as file:
+            my_object = _pickle.load(file)
+    except IOError:
+        my_object = None
+    return my_object
+
+
+def use_pickle(func, *args, **kwargs):
+    """
+    Simplecache takes func with args and kwargs
+    Returns the cached item if it exists otherwise does the function
+    """
+    cache_name = kwargs.pop('cache_name', '')
+    cache_only = kwargs.pop('cache_only', False)
+    cache_refresh = kwargs.pop('cache_refresh', False)
+    my_object = get_pickle(cache_name) if not cache_refresh else None
+    if my_object:
+        return my_object
+    elif not cache_only:
+        my_object = func(*args, **kwargs)
+        return set_pickle(my_object, cache_name)
+
+
+def get_property(name, set_property=None, clear_property=False, prefix=None, window_id=None):
+    window = xbmcgui.Window(window_id) if window_id else xbmcgui.Window(xbmcgui.getCurrentWindowId())
+    name = '{0}.{1}'.format(prefix, name) if prefix else name
+    if clear_property:
+        window.clearProperty(name)
+        return
+    elif set_property:
+        window.setProperty(name, set_property)
+        return set_property
+    return window.getProperty(name)

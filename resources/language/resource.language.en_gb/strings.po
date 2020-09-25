@@ -1193,6 +1193,26 @@ msgctxt "#32236"
 msgid "Select Item"
 msgstr ""
 
+#: /resources/lib/userdiscover.py
+msgctxt "#32237"
+msgid "Clear Discover History"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32238"
+msgid "Discover {} w/ Below Settings"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32239"
+msgid "Match"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32240"
+msgid "Sorting"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""

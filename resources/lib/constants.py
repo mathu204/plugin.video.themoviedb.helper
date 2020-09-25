@@ -19,79 +19,169 @@ PLAYERS_BASEDIR_USER = 'special://profile/addon_data/plugin.video.themoviedb.hel
 
 PLAYERS_BASEDIR_BUNDLED = 'special://home/addons/plugin.video.themoviedb.helper/resources/players/'
 
+TMDB_ALL_ITEMS_LISTS = {
+    'movie': {
+        'type': 'movie',
+        'sort': False,
+        'limit': 20
+    },
+    'tv': {
+        'type': 'tv_series',
+        'sort': False,
+        'limit': 20
+    },
+    'person': {
+        'type': 'person',
+        'sort': False,
+        'limit': 20
+    },
+    'collection': {
+        'type': 'collection',
+        'sort': False,
+        'limit': 20
+    },
+    'network': {
+        'type': 'tv_network',
+        'sort': True,
+        'limit': 2500,
+        'params': {'info': 'discover', 'tmdb_type': 'tv', 'with_networks': '{tmdb_id}'}
+    },
+    'keyword': {
+        'type': 'keyword',
+        'sort': True,
+        'limit': 2500,
+        'params': {'info': 'discover', 'tmdb_type': 'movie', 'with_keywords': '{tmdb_id}'}
+    },
+    'studio': {
+        'type': 'production_company',
+        'sort': True,
+        'limit': 2500,
+        'params': {'info': 'discover', 'tmdb_type': 'movie', 'with_companies': '{tmdb_id}'}
+    }
+}
+
 TMDB_BASIC_LISTS = {
     'popular': {
         'path': '{tmdb_type}/popular',
-        'key': 'results'},
+        'key': 'results'
+    },
     'top_rated': {
         'path': '{tmdb_type}/top_rated',
-        'key': 'results'},
+        'key': 'results'
+    },
     'upcoming': {
         'path': '{tmdb_type}/upcoming',
-        'key': 'results'},
+        'key': 'results'
+    },
     'trending_day': {
         'path': 'trending/{tmdb_type}/day',
-        'key': 'results'},
+        'key': 'results'
+    },
     'trending_week': {
         'path': 'trending/{tmdb_type}/week',
-        'key': 'results'},
+        'key': 'results'
+    },
     'now_playing': {
         'path': '{tmdb_type}/now_playing',
-        'key': 'results'},
+        'key': 'results'
+    },
     'airing_today': {
         'path': '{tmdb_type}/airing_today',
-        'key': 'results'},
+        'key': 'results'
+    },
     'on_the_air': {
         'path': '{tmdb_type}/on_the_air',
-        'key': 'results'},
+        'key': 'results'
+    },
     'recommendations': {
         'path': '{tmdb_type}/{tmdb_id}/recommendations',
         'key': 'results',
-        'dbid_sorting': True},
+        'dbid_sorting': True
+    },
     'similar': {
         'path': '{tmdb_type}/{tmdb_id}/similar',
         'key': 'results',
-        'dbid_sorting': True},
+        'dbid_sorting': True
+    },
     'stars_in_movies': {
         'path': 'person/{tmdb_id}/movie_credits',
         'key': 'cast',
         'tmdb_type': 'movie',
-        'dbid_sorting': True},
+        'dbid_sorting': True
+    },
     'stars_in_tvshows': {
         'path': 'person/{tmdb_id}/tv_credits',
         'key': 'cast',
         'dbid_sorting': True,
-        'tmdb_type': 'tv'},
+        'tmdb_type': 'tv'
+    },
     'crew_in_movies': {
         'path': 'person/{tmdb_id}/movie_credits',
         'key': 'crew',
         'dbid_sorting': True,
-        'tmdb_type': 'movie'},
+        'tmdb_type': 'movie'
+    },
     'crew_in_tvshows': {
         'path': 'person/{tmdb_id}/tv_credits',
         'key': 'crew',
         'dbid_sorting': True,
-        'tmdb_type': 'tv'},
+        'tmdb_type': 'tv'
+    },
     'images': {
         'path': 'person/{tmdb_id}/images',
         'key': 'profiles',
-        'tmdb_type': 'image'},
+        'tmdb_type': 'image'
+    },
     'videos': {
         'path': '{tmdb_type}/{tmdb_id}/videos',
         'key': 'results',
-        'tmdb_type': 'video'},
+        'tmdb_type': 'video'
+    },
     'posters': {
         'path': '{tmdb_type}/{tmdb_id}/images',
         'key': 'posters',
-        'tmdb_type': 'image'},
+        'tmdb_type': 'image'
+    },
     'fanart': {
         'path': '{tmdb_type}/{tmdb_id}/images',
         'key': 'backdrops',
-        'tmdb_type': 'image'},
+        'tmdb_type': 'image'
+    },
+    'reviews': {
+        'path': '{tmdb_type}/{tmdb_id}/reviews',
+        'key': 'results'
+    },
+    'revenue_movies': {
+        'path': 'discover/{tmdb_type}?sort_by=revenue.desc',
+        'key': 'results'
+    },
+    'most_voted': {
+        'path': 'discover/{tmdb_type}?sort_by=vote_count.desc',
+        'key': 'results'
+    },
+    'collection': {
+        'path': 'collection/{tmdb_id}',
+        'key': 'parts',
+        'tmdb_type': 'movie'
+    },
     'movie_keywords': {
         'path': 'movie/{tmdb_id}/keywords',
         'key': 'keywords',
-        'tmdb_type': 'keyword'},
-    'reviews': {
-        'path': '{tmdb_type}/{tmdb_id}/reviews',
-        'key': 'results'}}
+        'tmdb_type': 'keyword',
+        'params': {
+            'info': 'discover',
+            'tmdb_type': 'movie',
+            'with_keywords': '{tmdb_id}'
+        }
+    },
+    'genres': {
+        'path': 'genre/{tmdb_type}/list',
+        'key': 'genres',
+        'tmdb_type': 'genre',
+        'params': {
+            'info': 'discover',
+            'tmdb_type': '{base_tmdb_type}',
+            'with_genres': '{tmdb_id}'
+        }
+    }
+}

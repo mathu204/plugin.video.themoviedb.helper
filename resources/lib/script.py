@@ -6,10 +6,10 @@ import sys
 import xbmc
 import xbmcgui
 import resources.lib.utils as utils
-import resources.lib.plugin as plugin
+import resources.lib.basedir as basedir
 from resources.lib.fanarttv import FanartTV
 from resources.lib.tmdb import TMDb
-from resources.lib.plugin import ADDON, PLUGINPATH
+from resources.lib.plugin import ADDON
 
 
 class Script(object):
@@ -44,25 +44,8 @@ class Script(object):
     def related_lists(self, tmdb_id=None, tmdb_type=None, season=None, episode=None, container_update=True, **kwargs):
         if not tmdb_id or not tmdb_type:
             return
-        if tmdb_type == 'movie':
-            items = [{'label': 'Play', 'path': PLUGINPATH, 'params': {
-                'info': 'play', 'tmdb_id': tmdb_id, 'tmdb_type': tmdb_type}}]
-            items += plugin.get_basedir_details('movie')
-        elif tmdb_type == 'tv' and season is not None and episode is not None:
-            items = [{'label': 'Play', 'path': PLUGINPATH, 'params': {
-                'info': 'play', 'tmdb_id': tmdb_id, 'tmdb_type': tmdb_type, 'season': season, 'episode': episode}}]
-            items += plugin.get_basedir_details('tv')
-        elif tmdb_type == 'tv' and season is not None:
-            items = [{'label': 'Browse', 'path': PLUGINPATH, 'params': {
-                'info': 'episodes', 'tmdb_id': tmdb_id, 'tmdb_type': tmdb_type, 'season': season}}]
-            items += plugin.get_basedir_details('tv')
-        elif tmdb_type == 'tv':
-            items = [{'label': 'Browse', 'path': PLUGINPATH, 'params': {
-                'info': 'seasons', 'tmdb_id': tmdb_id, 'tmdb_type': tmdb_type}}]
-            items += plugin.get_basedir_details('tv')
-        elif tmdb_type == 'person':
-            items = plugin.get_basedir_details('person')
-        else:
+        items = basedir.get_basedir_details(tmdb_type=tmdb_type, tmdb_id=tmdb_id, season=season, episode=episode)
+        if not items or len(items) <= 1:
             return
         choice = xbmcgui.Dialog().contextmenu([i.get('label') for i in items])
         if choice == -1:

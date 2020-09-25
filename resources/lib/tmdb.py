@@ -1,9 +1,13 @@
 import xbmc
+import datetime
 import resources.lib.plugin as plugin
 import resources.lib.utils as utils
 import resources.lib.cache as cache
 from resources.lib.requestapi import RequestAPI
+from resources.lib.downloader import Downloader
 from resources.lib.plugin import ADDON, PLUGINPATH
+from resources.lib.constants import TMDB_ALL_ITEMS_LISTS
+from json import loads
 
 
 IMAGEPATH_ORIGINAL = 'https://image.tmdb.org/t/p/original'
@@ -191,6 +195,7 @@ class TMDb(RequestAPI):
     def get_infoproperties(self, item, tmdb_type, infoproperties=None, detailed=True):
         infoproperties = infoproperties or {}
         infoproperties['tmdb_type'] = tmdb_type
+        infoproperties['dbtype'] = plugin.convert_type(tmdb_type, plugin.TYPE_DB)
         infoproperties['role'] = item.get('character') or item.get('job') or item.get('department')
         infoproperties['character'] = item.get('character')
         infoproperties['job'] = item.get('job')
@@ -312,14 +317,15 @@ class TMDb(RequestAPI):
         unique_ids['tvdb'] = item.get('external_ids', {}).get('tvdb_id')
         return utils.del_empty_keys(unique_ids)
 
-    def get_params(self, item, tmdb_type, params=None):
+    def get_params(self, item, tmdb_type, params=None, definition=None, base_tmdb_type=None):
+        tmdb_id = item.get('id')
         params = params or {}
-        params['info'] = 'details'
-        params['tmdb_type'] = tmdb_type
-        params['tmdb_id'] = item.get('id')
+        definition = definition or {'info': 'details', 'tmdb_type': '{tmdb_type}', 'tmdb_id': '{tmdb_id}'}
+        for k, v in definition.items():
+            params[k] = v.format(tmdb_type=tmdb_type, tmdb_id=tmdb_id, base_tmdb_type=base_tmdb_type, **item)
         return utils.del_empty_keys(params)
 
-    def get_info(self, item, tmdb_type, base_item=None, detailed=True):
+    def get_info(self, item, tmdb_type, base_item=None, detailed=True, params_definition=None, base_tmdb_type=None):
         base_item = base_item or {}
         if item and tmdb_type:
             base_item['label'] = self.get_title(item)
@@ -327,7 +333,7 @@ class TMDb(RequestAPI):
             base_item['infolabels'] = self.get_infolabels(item, tmdb_type, base_item.get('infolabels', {}), detailed=detailed)
             base_item['infoproperties'] = self.get_infoproperties(item, tmdb_type, base_item.get('infoproperties', {}), detailed=detailed)
             base_item['unique_ids'] = self.get_unique_ids(item, base_item.get('unique_ids', {}))
-            base_item['params'] = self.get_params(item, tmdb_type, base_item.get('params', {}))
+            base_item['params'] = self.get_params(item, tmdb_type, base_item.get('params', {}), definition=params_definition, base_tmdb_type=base_tmdb_type)
             base_item['path'] = PLUGINPATH
             base_item['cast'] = self.get_cast(item) or [] if detailed else []
         return base_item
@@ -450,15 +456,76 @@ class TMDb(RequestAPI):
         items.append(prev_item) if prev_item else None
         return items
 
+    def _get_downloaded_list(self, export_list, sorting=None, reverse=False, datestamp=None):
+        if not export_list or not datestamp:
+            return
+        download_url = 'https://files.tmdb.org/p/exports/{}_ids_{}.json.gz'.format(export_list, datestamp)
+        raw_list = [loads(i) for i in Downloader(download_url=download_url).get_gzip_text().splitlines()]
+        return sorted(raw_list, key=lambda k: k.get(sorting, ''), reverse=reverse) if sorting else raw_list
+
+    def get_daily_list(self, export_list, sorting=None, reverse=False):
+        if not export_list:
+            return
+        datestamp = datetime.datetime.now() - datetime.timedelta(days=2)
+        datestamp = datestamp.strftime("%m_%d_%Y")
+        # Pickle results rather than cache due to being such a large list
+        return utils.use_pickle(
+            self._get_downloaded_list,
+            export_list=export_list, sorting=sorting, reverse=reverse, datestamp=datestamp,
+            cache_name='TMDb.Downloaded.List.v2.{}.{}.{}'.format(export_list, sorting, reverse, datestamp))
+
+    def get_all_items_list(self, tmdb_type, page=None):
+        if tmdb_type not in TMDB_ALL_ITEMS_LISTS:
+            return
+        daily_list = self.get_daily_list(
+            export_list=TMDB_ALL_ITEMS_LISTS.get(tmdb_type, {}).get('type'),
+            sorting=False, reverse=False)
+        if not daily_list:
+            return
+        items = []
+        param = TMDB_ALL_ITEMS_LISTS.get(tmdb_type, {}).get('params', {})
+        limit = TMDB_ALL_ITEMS_LISTS.get(tmdb_type, {}).get('limit', 20)
+        pos_z = utils.try_parse_int(page, fallback=1) * limit
+        pos_a = pos_z - limit
+        dbtype = plugin.convert_type(tmdb_type, plugin.TYPE_DB)
+        for i in daily_list[pos_a:pos_z]:
+            if not i.get('id'):
+                continue
+            if tmdb_type in ['keyword', 'network', 'studio']:
+                item = {
+                    'label': i.get('name'),
+                    'infolabels': {'mediatype': dbtype},
+                    'infoproperties': {'dbtype': dbtype},
+                    'unique_ids': {'tmdb': i.get('id')},
+                    'params': {}}
+            else:
+                item = self.get_details(tmdb_type, i.get('id'))
+            if not item:
+                continue
+            for k, v in param.items():
+                item['params'][k] = v.format(tmdb_id=i.get('id'))
+            items.append(item)
+        if not items:
+            return []
+        if TMDB_ALL_ITEMS_LISTS.get(tmdb_type, {}).get('sort'):
+            items = sorted(items, key=lambda k: k.get('label', ''))
+        if len(daily_list) > pos_z:
+            items.append({'next_page': utils.try_parse_int(page, fallback=1) + 1})
+        return items
+
     def get_search_list(self, tmdb_type, **kwargs):
         """ standard kwargs: query= page= """
         kwargs['key'] = 'results'
         return self.get_basic_list('search/{}'.format(tmdb_type), tmdb_type, **kwargs)
 
-    def get_basic_list(self, path, tmdb_type, key='results', **kwargs):
+    def get_basic_list(self, path, tmdb_type, key='results', params=None, base_tmdb_type=None, **kwargs):
         response = self.get_request_sc(path, **kwargs)
         results = response.get(key, []) if response else []
-        items = [self.get_info(i, tmdb_type, detailed=False) for i in results if i]
+        items = [self.get_info(
+            i, tmdb_type,
+            detailed=False,
+            params_definition=params,
+            base_tmdb_type=base_tmdb_type) for i in results if i]
         if utils.try_parse_int(response.get('page', 0)) < utils.try_parse_int(response.get('total_pages', 0)):
             items.append({'next_page': utils.try_parse_int(response.get('page', 0)) + 1})
         return items
