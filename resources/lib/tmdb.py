@@ -1,10 +1,12 @@
 import xbmc
+import xbmcgui
 import datetime
 import resources.lib.plugin as plugin
 import resources.lib.utils as utils
 import resources.lib.cache as cache
 from resources.lib.requestapi import RequestAPI
 from resources.lib.downloader import Downloader
+from resources.lib.listitem import ListItem
 from resources.lib.plugin import ADDON, PLUGINPATH
 from resources.lib.constants import TMDB_ALL_ITEMS_LISTS
 from json import loads
@@ -41,7 +43,17 @@ class TMDb(RequestAPI):
         self.mpaa_prefix = mpaa_prefix
         self.append_to_response = APPEND_TO_RESPONSE
 
-    def get_tmdb_id(self, tmdb_type=None, imdb_id=None, tvdb_id=None, query=None, year=None, episode_year=None, **kwargs):
+    def get_url_separator(self, separator=None):
+        if separator == 'AND':
+            return '%2C'
+        elif separator == 'OR':
+            return '%7C'
+        elif not separator:
+            return '%2C'
+        else:
+            return False
+
+    def get_tmdb_id(self, tmdb_type=None, imdb_id=None, tvdb_id=None, query=None, year=None, episode_year=None, raw_data=False, **kwargs):
         func = self.get_request_sc
         if not tmdb_type:
             return
@@ -63,6 +75,8 @@ class TMDb(RequestAPI):
             request = request.get('results', [])
         if not request:
             return
+        if raw_data:
+            return request
         if tmdb_type == 'tv' and episode_year and len(request) > 1:
             for i in sorted(request, key=lambda k: k.get('first_air_date', ''), reverse=True):
                 if not i.get('first_air_date'):
@@ -71,6 +85,33 @@ class TMDb(RequestAPI):
                     if query in [i.get('name'), i.get('original_name')]:
                         return i.get('id')
         return request[0].get('id')
+
+    def get_tmdb_id_from_query(self, tmdb_type, query, header=None, use_details=False, get_listitem=False):
+        if not query or not tmdb_type:
+            return
+        response = TMDb().get_tmdb_id(tmdb_type, query=query, raw_data=True)
+        items = [ListItem(**TMDb().get_info(i, tmdb_type, detailed=False)).get_listitem() for i in response]
+        x = xbmcgui.Dialog().select(header, items, useDetails=use_details)
+        if x != 1:
+            return items[x] if get_listitem else items[x].getUniqueID('tmdb')
+
+    def get_translated_list(self, items, tmdb_type=None, separator=None):
+        """
+        If tmdb_type specified will look-up IDs using search function otherwise assumes item ID is passed
+        """
+        separator = self.get_url_separator(separator)
+        temp_list = ''
+        for item in items:
+            item_id = self.get_tmdb_id(tmdb_type=tmdb_type, query=item) if tmdb_type else item
+            if not item_id:
+                continue
+            if separator:  # If we've got a url separator then concatinate the list with it
+                temp_list = '{}{}{}'.format(temp_list, separator, item_id) if temp_list else item_id
+            else:  # If no separator, assume that we just want to use the first found ID
+                temp_list = str(item_id)
+                break  # Stop once we have a item
+        temp_list = temp_list if temp_list else 'null'
+        return temp_list
 
     def get_title(self, item):
         if item.get('title'):

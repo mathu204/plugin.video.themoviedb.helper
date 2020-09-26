@@ -82,10 +82,10 @@ def _replace_search_history(tmdb_type=None, query=None, replace=None, **kwargs):
     return search_history
 
 
-def set_search_history(tmdb_type=None, query=None, cache_days=120, clear_cache=False, max_entries=9, replace=False, cache_name='search'):
+def set_search_history(tmdb_type=None, query=None, cache_days=120, clear_cache=False, max_entries=9, replace=False):
     if not tmdb_type:
         return
-    cache_name = 'history.{}.{}'.format(cache_name, tmdb_type)
+    cache_name = 'search.history.{}'.format(tmdb_type)
     if not clear_cache:
         func = _add_search_history if replace is False else _replace_search_history
         search_history = func(tmdb_type=tmdb_type, query=query, max_entries=max_entries, replace=replace)

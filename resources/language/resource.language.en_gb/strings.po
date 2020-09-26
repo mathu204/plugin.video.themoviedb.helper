@@ -1213,6 +1213,11 @@ msgctxt "#32240"
 msgid "Sorting"
 msgstr ""
 
+#: /resources/lib/userdiscover.py
+msgctxt "#32241"
+msgid "Save As"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""

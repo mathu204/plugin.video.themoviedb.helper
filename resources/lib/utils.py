@@ -307,3 +307,11 @@ def get_property(name, set_property=None, clear_property=False, prefix=None, win
         window.setProperty(name, set_property)
         return set_property
     return window.getProperty(name)
+
+
+def split_items(items, separator='/'):
+    separator = ' {} '.format(separator)
+    if items and separator in items:
+        items = items.split(separator)
+    items = [items] if not isinstance(items, list) else items  # Make sure we return a list to prevent a string being iterated over characters
+    return items
