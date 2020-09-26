@@ -79,6 +79,7 @@ def _replace_search_history(tmdb_type=None, query=None, replace=None, **kwargs):
     except Exception as exc:
         utils.kodi_log(exc, 1)
         return
+    utils.kodi_log(search_history, 1)
     return search_history
 
 
@@ -89,5 +90,5 @@ def set_search_history(tmdb_type=None, query=None, cache_days=120, clear_cache=F
     if not clear_cache:
         func = _add_search_history if replace is False else _replace_search_history
         search_history = func(tmdb_type=tmdb_type, query=query, max_entries=max_entries, replace=replace)
-        set_cache(search_history, cache_name=cache_name, cache_days=cache_days)
+        set_cache(search_history, cache_name=cache_name, cache_days=cache_days, force=True)
     return set_cache(None, cache_name, 0, force=True) if clear_cache else query

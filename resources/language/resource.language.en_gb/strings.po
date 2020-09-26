@@ -1218,6 +1218,196 @@ msgctxt "#32241"
 msgid "Save As"
 msgstr ""
 
+#: /resources/lib/userdiscover.py
+msgctxt "#32242"
+msgid "Premiere"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32243"
+msgid "Theatrical (limited)"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32244"
+msgid "Theatrical"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32245"
+msgid "Digital"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32246"
+msgid "Physical"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32247"
+msgid "With Cast"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32248"
+msgid "With Crew"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32249"
+msgid "With People"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32250"
+msgid "Primary Release Year"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32251"
+msgid "Primary Release Date After"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32252"
+msgid "Primary Release Date Before"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32253"
+msgid "Release Date After"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32254"
+msgid "Release Date Before"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32255"
+msgid "Release Type"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32256"
+msgid "Release Region"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32257"
+msgid "With Networks"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32258"
+msgid "Air Date After"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32259"
+msgid "Air Date Before"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32260"
+msgid "First Air Date After"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32261"
+msgid "First Air Date Before"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32262"
+msgid "First Air Year"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32263"
+msgid "With Genres"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32264"
+msgid "Without Genres"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32265"
+msgid "With Companies"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32266"
+msgid "Without"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32267"
+msgid "Without Keywords"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32268"
+msgid "With Keywords"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32269"
+msgid "With Original Language"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32270"
+msgid "Vote Count ( > or = )"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32271"
+msgid "Vote Count ( < or = )"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32272"
+msgid "Vote Average ( > or = )"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32273"
+msgid "Vote Average ( < or = )"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32274"
+msgid "Runtime (Minutes) ( > or = )"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32275"
+msgid "Runtime (Minutes) ( < or = )"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32276"
+msgid "Search for"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32277"
+msgid "Add Rule"
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32278"
+msgid "Enter Network IDs separated with \\\" / \\\""
+msgstr ""
+
+#: /resources/lib/userdiscover.py
+msgctxt "#32279"
+msgid "Enter Year"
+msgstr ""
+
 msgctxt "#30030"
 msgid "Hindi (India)"
 msgstr ""

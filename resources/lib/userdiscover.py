@@ -32,16 +32,7 @@ ALL_METHODS = [
     'with_release_type', 'region', 'with_networks', 'air_date.gte', 'air_date.lte', 'first_air_date.gte',
     'first_air_date.lte', 'first_air_date_year', 'with_genres', 'without_genres', 'with_companies', 'with_keywords',
     'without_keywords', 'with_original_language', 'vote_count.gte', 'vote_count.lte', 'vote_average.gte',
-    'vote_average.lte', 'with_runtime.gte', 'with_runtime.lte']
-
-
-RELEASE_TYPES = [
-    {'id': 1, 'name': 'Premiere'},
-    {'id': 2, 'name': 'Theatrical (limited)'},
-    {'id': 3, 'name': 'Theatrical'},
-    {'id': 4, 'name': 'Digital'},
-    {'id': 5, 'name': 'Physical'},
-    {'id': 6, 'name': 'TV'}]
+    'vote_average.lte', 'with_runtime.gte', 'with_runtime.lte', 'save_index', 'save_label']
 
 
 REGIONS = [
@@ -483,6 +474,16 @@ LANGUAGES = [
     {"id": "zu", "name": u"Zulu (zu)"}]
 
 
+def _get_release_types():
+    return [
+        {'id': 1, 'name': ADDON.getLocalizedString(32242)},
+        {'id': 2, 'name': ADDON.getLocalizedString(32243)},
+        {'id': 3, 'name': ADDON.getLocalizedString(32244)},
+        {'id': 4, 'name': ADDON.getLocalizedString(32245)},
+        {'id': 5, 'name': ADDON.getLocalizedString(32246)},
+        {'id': 6, 'name': xbmc.getLocalizedString(36037)}]
+
+
 def _get_basedir_top(tmdb_type):
     return [
         {
@@ -517,44 +518,44 @@ def _get_basedir_end(tmdb_type):
 
 def _get_basedir_rules_movies():
     return [
-        {'label': 'With Cast', 'method': 'with_cast'},
-        {'label': 'With Crew', 'method': 'with_crew'},
-        {'label': 'With People', 'method': 'with_people'},
-        {'label': 'Primary Release Year', 'method': 'primary_release_year'},
-        {'label': 'Primary Release Date After', 'method': 'primary_release_date.gte'},
-        {'label': 'Primary Release Date Before', 'method': 'primary_release_date.lte'},
-        {'label': 'Release Date After', 'method': 'release_date.gte'},
-        {'label': 'Release Date Before', 'method': 'release_date.lte'},
-        {'label': 'Release Type', 'method': 'with_release_type'},
-        {'label': 'Release Region', 'method': 'region'}]
+        {'label': ADDON.getLocalizedString(32247), 'method': 'with_cast'},
+        {'label': ADDON.getLocalizedString(32248), 'method': 'with_crew'},
+        {'label': ADDON.getLocalizedString(32249), 'method': 'with_people'},
+        {'label': ADDON.getLocalizedString(32250), 'method': 'primary_release_year'},
+        {'label': ADDON.getLocalizedString(32251), 'method': 'primary_release_date.gte'},
+        {'label': ADDON.getLocalizedString(32252), 'method': 'primary_release_date.lte'},
+        {'label': ADDON.getLocalizedString(32253), 'method': 'release_date.gte'},
+        {'label': ADDON.getLocalizedString(32254), 'method': 'release_date.lte'},
+        {'label': ADDON.getLocalizedString(32255), 'method': 'with_release_type'},
+        {'label': ADDON.getLocalizedString(32256), 'method': 'region'}]
 
 
 def _get_basedir_rules_tv():
     return [
-        {'label': 'With Networks', 'method': 'with_networks'},
-        {'label': 'Air Date After', 'method': 'air_date.gte'},
-        {'label': 'Air Date Before', 'method': 'air_date.lte'},
-        {'label': 'First Air Date After', 'method': 'first_air_date.gte'},
-        {'label': 'First Air Date Before', 'method': 'first_air_date.lte'},
-        {'label': 'First Air Year', 'method': 'first_air_date_year'}]
+        {'label': ADDON.getLocalizedString(32257), 'method': 'with_networks'},
+        {'label': ADDON.getLocalizedString(32258), 'method': 'air_date.gte'},
+        {'label': ADDON.getLocalizedString(32259), 'method': 'air_date.lte'},
+        {'label': ADDON.getLocalizedString(32260), 'method': 'first_air_date.gte'},
+        {'label': ADDON.getLocalizedString(32261), 'method': 'first_air_date.lte'},
+        {'label': ADDON.getLocalizedString(32262), 'method': 'first_air_date_year'}]
 
 
 def _get_basedir_rules(tmdb_type):
     items = [
-        {'label': 'With Genres', 'method': 'with_genres'},
-        {'label': 'Without Genres', 'method': 'without_genres'},
-        {'label': 'With Companies', 'method': 'with_companies'},
-        {'label': 'With Keywords', 'method': 'with_keywords'},
-        {'label': 'Without Keywords', 'method': 'without_keywords'}]
+        {'label': ADDON.getLocalizedString(32263), 'method': 'with_genres'},
+        {'label': ADDON.getLocalizedString(32264), 'method': 'without_genres'},
+        {'label': ADDON.getLocalizedString(32265), 'method': 'with_companies'},
+        {'label': ADDON.getLocalizedString(32268), 'method': 'with_keywords'},
+        {'label': ADDON.getLocalizedString(32267), 'method': 'without_keywords'}]
     items += _get_basedir_rules_movies() if tmdb_type == 'movie' else _get_basedir_rules_tv()
     items += [
-        {'label': 'With Original Language', 'method': 'with_original_language'},
-        {'label': 'Vote Count ( > or = )', 'method': 'vote_count.gte'},
-        {'label': 'Vote Count ( < or = )', 'method': 'vote_count.lte'},
-        {'label': 'Vote Average ( > or = )', 'method': 'vote_average.gte'},
-        {'label': 'Vote Average ( < or = )', 'method': 'vote_average.lte'},
-        {'label': 'Runtime (Minutes) ( > or = )', 'method': 'with_runtime.gte'},
-        {'label': 'Runtime (Minutes) ( < or = )', 'method': 'with_runtime.lte'}]
+        {'label': ADDON.getLocalizedString(32269), 'method': 'with_original_language'},
+        {'label': ADDON.getLocalizedString(32270), 'method': 'vote_count.gte'},
+        {'label': ADDON.getLocalizedString(32271), 'method': 'vote_count.lte'},
+        {'label': ADDON.getLocalizedString(32272), 'method': 'vote_average.gte'},
+        {'label': ADDON.getLocalizedString(32273), 'method': 'vote_average.lte'},
+        {'label': ADDON.getLocalizedString(32274), 'method': 'with_runtime.gte'},
+        {'label': ADDON.getLocalizedString(32275), 'method': 'with_runtime.lte'}]
     return items
 
 
@@ -615,7 +616,7 @@ def _get_query(tmdb_type, method, query=None, header=None, use_details=False):
     item = TMDb().get_tmdb_id_from_query(
         tmdb_type=tmdb_type,
         query=query or utils.try_decode_string(xbmcgui.Dialog().input(header)),
-        header=header or '{} {}'.format('Search for', tmdb_type),
+        header=header or '{} {}'.format(ADDON.getLocalizedString(32276), tmdb_type),
         use_details=use_details,
         get_listitem=True)
     if item and item.getUniqueID('tmdb'):
@@ -641,7 +642,7 @@ def _get_method(tmdb_type, method, header=None, use_details=False, confirmation=
     return properties
 
 
-def _select_method(tmdb_type, header='Add Rule'):
+def _select_method(tmdb_type, header=None):
     rules = _get_basedir_rules(tmdb_type)
     x = xbmcgui.Dialog().select(header, [i.get('label') for i in rules])
     if x != -1:
@@ -732,6 +733,8 @@ def _edit_rules(idx=-1):
         item = history[idx]
     except IndexError:
         return
+    _win_prop('save_index', set_property='{}'.format(len(history) - 1 - idx))
+    _win_prop('save_label', set_property='{}'.format(item.get('label')))
     for k, v in item.get('params', {}).items():
         if k in ['info', 'tmdb_type']:
             continue
@@ -740,16 +743,20 @@ def _edit_rules(idx=-1):
 
 
 def _save_rules(tmdb_type):
+    my_idx = utils.try_parse_int(_win_prop('save_index'), fallback=-1)
     params = _get_discover_params(tmdb_type)
     labels = _get_discover_params(tmdb_type, get_labels=True)
-    label = xbmcgui.Dialog().input(ADDON.getLocalizedString(32241))
-    cache.set_search_history('discover', query={'label': label, 'params': params, 'labels': labels})
+    label = _win_prop('save_label') if my_idx != -1 else xbmcgui.Dialog().input(ADDON.getLocalizedString(32241))
+    cache.set_search_history(
+        'discover',
+        query={'label': label, 'params': params, 'labels': labels},
+        replace=my_idx if my_idx != -1 else False)
     xbmcgui.Dialog().ok('{} {}'.format(xbmc.getLocalizedString(35259), label), '{}'.format(params))
 
 
 def _add_rule(tmdb_type, method=None):
     if not method or method == 'add_rule':
-        method = _select_method(tmdb_type)
+        method = _select_method(tmdb_type, header=ADDON.getLocalizedString(32277))
     if not method:
         return
     rules = None
@@ -770,16 +777,16 @@ def _add_rule(tmdb_type, method=None):
         rules = _get_method('keyword', method, use_details=False)
         overwrite = False
     elif method == 'with_networks':
-        rules = _get_keyboard(method, header='Enter Network IDs separated with \" / \"')
+        rules = _get_keyboard(method, header=ADDON.getLocalizedString(32278))
     elif '_year' in method:
-        rules = _get_numeric(method, header='Enter Year')
+        rules = _get_numeric(method, header=ADDON.getLocalizedString(32279))
     elif 'vote_' in method or '_runtime' in method:
-        rules = _get_numeric(method, header='Enter Value')
+        rules = _get_numeric(method, header=xbmc.getLocalizedString(16028))
     elif '_date' in method:
         header = '{} YYYY-MM-DD\n{}'.format(ADDON.getLocalizedString(32114), ADDON.getLocalizedString(32113))
         rules = _get_keyboard(method, header=header)
     elif method == 'with_release_type':
-        rules = _select_properties(RELEASE_TYPES, method, header=ADDON.getLocalizedString(32119))
+        rules = _select_properties(_get_release_types(), method, header=ADDON.getLocalizedString(32119))
     elif method == 'region':
         rules = _select_properties(REGIONS, method, header=ADDON.getLocalizedString(32120), multiselect=False)
     elif method == 'with_original_language':
@@ -858,10 +865,37 @@ class ListsUserDiscover():
         return items
 
     def list_discoverdir_router(self, **kwargs):
-        if kwargs.get('clear_cache') != 'True':
+        if kwargs.get('clear_cache') != 'True' and kwargs.get('method') not in ['delete', 'rename']:
             return self.list_discoverdir(**kwargs)
-        cache.set_search_history('discover', clear_cache=True)
-        self.container_refresh = True
+
+        params = kwargs.copy()
+        params.pop('clear_cache', None)
+        params.pop('method', None)
+        params.pop('idx', None)
+        self.container_update = '{},replace'.format(utils.get_url(PLUGINPATH, **params))
+
+        if kwargs.get('clear_cache') == 'True':
+            cache.set_search_history('discover', clear_cache=True)
+
+        elif kwargs.get('method') == 'delete':
+            idx = utils.try_parse_int(kwargs.get('idx', -1))
+            if idx == -1:
+                return
+            cache.set_search_history('discover', replace=idx)
+
+        elif kwargs.get('method') == 'rename':
+            idx = utils.try_parse_int(kwargs.get('idx', -1))
+            if idx == -1:
+                return
+            history = cache.get_search_history('discover')
+            try:
+                item = history[idx]
+            except IndexError:
+                return
+            if not item:
+                return
+            item['label'] = xbmcgui.Dialog().input('Rename', defaultt=item.get('label')) or item.get('label')
+            cache.set_search_history('discover', item, replace=idx)
 
     def list_discoverdir(self, **kwargs):
         items = []
@@ -880,14 +914,16 @@ class ListsUserDiscover():
         for x, i in enumerate(history):
             item_params = utils.merge_two_dicts(kwargs, i.get('params', {}))
             edit_params = {'info': 'user_discover', 'tmdb_type': item_params.get('tmdb_type'), 'method': 'edit', 'idx': x}
+            name_params = {'info': 'dir_discover', 'tmdb_type': item_params.get('tmdb_type'), 'method': 'rename', 'idx': x}
+            dele_params = {'info': 'dir_discover', 'tmdb_type': item_params.get('tmdb_type'), 'method': 'delete', 'idx': x}
             item = {
                 'label': i.get('label'),
                 'params': item_params,
                 'art': artwork,
                 'context_menu': [
-                    ('Edit', 'Container.Update({})'.format(utils.get_url(PLUGINPATH, **edit_params))),
-                    ('Rename', ''),
-                    ('Delete', '')]}
+                    (xbmc.getLocalizedString(21435), 'Container.Update({})'.format(utils.get_url(PLUGINPATH, **edit_params))),
+                    (xbmc.getLocalizedString(118), 'Container.Update({})'.format(utils.get_url(PLUGINPATH, **name_params))),
+                    (xbmc.getLocalizedString(117), 'Container.Update({})'.format(utils.get_url(PLUGINPATH, **dele_params)))]}
             items.append(item)
         if history:
             item = {
@@ -917,6 +953,7 @@ class ListsUserDiscover():
         basedir_items += _get_basedir_end(tmdb_type)
 
         self.update_listing = True if method and method != 'edit' else False
+        self.container_content = 'files'
 
         items = [_get_formatted_item(i) for i in basedir_items]
         items[0]['params'] = _get_discover_params(tmdb_type)
