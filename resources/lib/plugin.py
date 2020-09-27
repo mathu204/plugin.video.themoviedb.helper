@@ -29,6 +29,17 @@ def get_mpaa_prefix():
     return ''
 
 
+def convert_trakt_type(trakt_type):
+    if trakt_type == 'movie':
+        return 'movie'
+    elif trakt_type == 'show':
+        return 'tv'
+    elif trakt_type == 'season':
+        return 'season'
+    elif trakt_type == 'episode':
+        return 'episode'
+
+
 def convert_type(tmdb_type, output, season=None, episode=None):
     if tmdb_type == 'tv' and season is not None:
         tmdb_type == 'episode' if episode is not None else 'season'

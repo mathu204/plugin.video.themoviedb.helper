@@ -358,14 +358,6 @@ class TMDb(RequestAPI):
         unique_ids['tvdb'] = item.get('external_ids', {}).get('tvdb_id')
         return utils.del_empty_keys(unique_ids)
 
-    def get_params(self, item, tmdb_type, params=None, definition=None, base_tmdb_type=None):
-        tmdb_id = item.get('id')
-        params = params or {}
-        definition = definition or {'info': 'details', 'tmdb_type': '{tmdb_type}', 'tmdb_id': '{tmdb_id}'}
-        for k, v in definition.items():
-            params[k] = v.format(tmdb_type=tmdb_type, tmdb_id=tmdb_id, base_tmdb_type=base_tmdb_type, **item)
-        return utils.del_empty_keys(params)
-
     def get_info(self, item, tmdb_type, base_item=None, detailed=True, params_definition=None, base_tmdb_type=None):
         base_item = base_item or {}
         if item and tmdb_type:
@@ -374,7 +366,7 @@ class TMDb(RequestAPI):
             base_item['infolabels'] = self.get_infolabels(item, tmdb_type, base_item.get('infolabels', {}), detailed=detailed)
             base_item['infoproperties'] = self.get_infoproperties(item, tmdb_type, base_item.get('infoproperties', {}), detailed=detailed)
             base_item['unique_ids'] = self.get_unique_ids(item, base_item.get('unique_ids', {}))
-            base_item['params'] = self.get_params(item, tmdb_type, base_item.get('params', {}), definition=params_definition, base_tmdb_type=base_tmdb_type)
+            base_item['params'] = utils.get_params(item, tmdb_type, base_item.get('params', {}), definition=params_definition, base_tmdb_type=base_tmdb_type)
             base_item['path'] = PLUGINPATH
             base_item['cast'] = self.get_cast(item) or [] if detailed else []
         return base_item

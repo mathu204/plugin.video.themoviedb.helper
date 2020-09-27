@@ -3,7 +3,7 @@ import resources.lib.constants as constants
 from resources.lib.tmdb import TMDb
 
 
-class ListsTMDb():
+class TMDbLists():
     def list_tmdb(self, info, tmdb_type, tmdb_id=None, page=None, **kwargs):
         info_model = constants.TMDB_BASIC_LISTS.get(info)
         info_tmdb_type = info_model.get('tmdb_type') or tmdb_type

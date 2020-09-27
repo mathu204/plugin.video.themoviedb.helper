@@ -1,3 +1,4 @@
+
 import sys
 import xbmc
 import xbmcplugin
@@ -12,13 +13,14 @@ from resources.lib.fanarttv import FanartTV
 from resources.lib.itemutils import ItemUtils
 from resources.lib.players import Players
 from resources.lib.plugin import ADDON
-from resources.lib.basedir import ListsBaseDir
-from resources.lib.basiclists import ListsTMDb
-from resources.lib.search import ListsSearch
-from resources.lib.userdiscover import ListsUserDiscover
+from resources.lib.basedir import BaseDirLists
+from resources.lib.tmdblists import TMDbLists
+from resources.lib.traktlists import TraktLists
+from resources.lib.search import SearchLists
+from resources.lib.userdiscover import UserDiscoverLists
 
 
-class Container(object, ListsTMDb, ListsBaseDir, ListsSearch, ListsUserDiscover):
+class Container(object, TMDbLists, BaseDirLists, SearchLists, UserDiscoverLists, TraktLists):
     def __init__(self):
         self.handle = int(sys.argv[1])
         self.paramstring = utils.try_decode_string(sys.argv[2][1:])
@@ -32,9 +34,16 @@ class Container(object, ListsTMDb, ListsBaseDir, ListsSearch, ListsUserDiscover)
         self.item_type = None
         self.kodi_db = None
         self.library = None
+        self.tmdb_cache_only = True
         self.ftv_lookup = ADDON.getSettingBool('fanarttv_lookup')
         self.ftv_widget_lookup = ADDON.getSettingBool('widget_fanarttv_lookup')
         self.is_widget = True if self.params.get('widget') else False
+
+        # Filters and Exclusions
+        self.filter_key = self.params.get('filter_key', None)
+        self.filter_value = utils.split_items(self.params.get('filter_value', None))[0]
+        self.exclude_key = self.params.get('exclude_key', None)
+        self.exclude_value = utils.split_items(self.params.get('exclude_value', None))[0]
 
         # Legacy code clean-up for back compatibility
         # TODO: Maybe only necessary for player code??
@@ -43,7 +52,7 @@ class Container(object, ListsTMDb, ListsBaseDir, ListsSearch, ListsUserDiscover)
         if self.params.get('tmdb_type') in ['season', 'episode']:
             self.params['tmdb_type'] = 'tv'
 
-    def add_items(self, items=None, allow_pagination=True, parent_params=None, kodi_db=None):
+    def add_items(self, items=None, allow_pagination=True, parent_params=None, kodi_db=None, tmdb_cache_only=True):
         if not items:
             return
         listitem_utils = ItemUtils(
@@ -53,9 +62,10 @@ class Container(object, ListsTMDb, ListsBaseDir, ListsSearch, ListsUserDiscover)
         for i in items:
             if not allow_pagination and 'next_page' in i:
                 continue
-            # TODO: Filter out unaired items
+            if self.item_is_excluded(i):
+                continue  # TODO: Filter out unaired items and/or format labels
             listitem = ListItem(parent_params=parent_params, **i)
-            listitem.set_details(details=listitem_utils.get_tmdb_details(listitem))  # Quick because only get cached
+            listitem.set_details(details=listitem_utils.get_tmdb_details(listitem, cache_only=tmdb_cache_only))  # Quick because only get cached
             listitem.set_details(details=listitem_utils.get_ftv_details(listitem), reverse=True)  # Slow when not cache only
             listitem.set_details(details=listitem_utils.get_kodi_details(listitem), reverse=True)  # Quick because local db
             # listitem.set_details(details=listitem_utils.get_external_ids(listitem))  # Too slow for return on value
@@ -89,6 +99,22 @@ class Container(object, ListsTMDb, ListsBaseDir, ListsSearch, ListsUserDiscover)
         if not is_widget and self.ftv_lookup:
             return False
         return True
+
+    def item_is_excluded(self, item):
+        if self.filter_key and self.filter_value:
+            if self.filter_key in item.get('infolabels', {}):
+                if utils.filtered_item(item['infolabels'], self.filter_key, self.filter_value):
+                    return True
+            elif self.filter_key in item.get('infoproperties', {}):
+                if utils.filtered_item(item['infoproperties'], self.filter_key, self.filter_value):
+                    return True
+        if self.exclude_key and self.exclude_value:
+            if self.exclude_key in item.get('infolabels', {}):
+                if utils.filtered_item(item['infolabels'], self.exclude_key, self.exclude_value, True):
+                    return True
+            elif self.exclude_key in item.get('infoproperties', {}):
+                if utils.filtered_item(item['infoproperties'], self.exclude_key, self.exclude_value, True):
+                    return True
 
     def get_kodi_database(self, tmdb_type):
         if tmdb_type == 'movie':
@@ -135,13 +161,20 @@ class Container(object, ListsTMDb, ListsBaseDir, ListsSearch, ListsUserDiscover)
             return self.list_crew(**kwargs)
         if info in constants.TMDB_BASIC_LISTS:
             return self.list_tmdb(**kwargs)
+        if info in constants.TRAKT_BASIC_LISTS:
+            return self.list_trakt(**kwargs)
         return self.list_basedir(info)
 
     def get_directory(self):
         items = self.get_items(**self.params)
         if not items:
             return
-        self.add_items(items, allow_pagination=self.allow_pagination, parent_params=self.params, kodi_db=self.kodi_db)
+        self.add_items(
+            items,
+            allow_pagination=self.allow_pagination,
+            parent_params=self.params,
+            kodi_db=self.kodi_db,
+            tmdb_cache_only=self.tmdb_cache_only)
         self.finish_container(
             update_listing=self.update_listing,
             plugin_category=self.plugin_category,

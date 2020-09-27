@@ -3,9 +3,10 @@ import xbmcgui
 import random
 import resources.lib.utils as utils
 import resources.lib.cache as cache
+import resources.lib.plugin as plugin
 from json import loads, dumps
 from resources.lib.requestapi import RequestAPI
-from resources.lib.plugin import ADDON
+from resources.lib.plugin import ADDON, PLUGINPATH
 
 
 API_URL = 'https://api.trakt.tv/'
@@ -27,7 +28,6 @@ class TraktAPI(RequestAPI):
         self.sync = {}
         self.last_activities = None
         self.prev_activities = None
-        self.refresh_check = 0
         self.attempted_login = False
         self.dialog_noapikey_header = u'{0} {1} {2}'.format(ADDON.getLocalizedString(32007), self.req_api_name, ADDON.getLocalizedString(32011))
         self.dialog_noapikey_text = ADDON.getLocalizedString(32012)
@@ -39,12 +39,17 @@ class TraktAPI(RequestAPI):
         self.authorize()
 
     def authorize(self, login=False):
+        # Already got authorization so return credentials
         if self.authorization:
             return self.authorization
+
+        # Get our saved credentials from previous login
         token = self.get_stored_token()
         if token.get('access_token'):
             self.authorization = token
             self.headers['Authorization'] = 'Bearer {0}'.format(self.authorization.get('access_token'))
+
+        # No saved credentials and user trying to use a feature that requires authorization so ask them to login
         elif login:
             if not self.attempted_login and xbmcgui.Dialog().yesno(
                     self.dialog_noapikey_header,
@@ -53,8 +58,18 @@ class TraktAPI(RequestAPI):
                     yeslabel=xbmc.getLocalizedString(186)):
                 self.login()
             self.attempted_login = True
-        if self.authorization:
-            xbmcgui.Window(10000).setProperty('TMDbHelper.TraktIsAuth', 'True')
+
+        # First time authorization in this session so let's confirm
+        if self.authorization and xbmcgui.Window(10000).getProperty('TMDbHelper.TraktIsAuth') != 'True':
+            # Check if we can get a response from user account
+            response = self.get_simple_api_request('https://api.trakt.tv/sync/last_activities', headers=self.headers)
+            # 401 is unauthorized error code so let's try refreshing the token
+            if response.status_code == 401:
+                self.authorization = self.refresh_token()
+            # Authorization confirmed so let's set a window property for future reference in this session
+            if self.authorization:
+                xbmcgui.Window(10000).setProperty('TMDbHelper.TraktIsAuth', 'True')
+
         return self.authorization
 
     def get_stored_token(self):
@@ -102,7 +117,6 @@ class TraktAPI(RequestAPI):
 
     def refresh_token(self):
         if not self.authorization or not self.authorization.get('refresh_token'):
-            self.login()
             return
         postdata = {
             'refresh_token': self.authorization.get('refresh_token'),
@@ -114,6 +128,7 @@ class TraktAPI(RequestAPI):
         if not self.authorization or not self.authorization.get('access_token'):
             return
         self.on_authenticated(auth_dialog=False)
+        return self.authorization
 
     def poller(self):
         if not self.on_poll():
@@ -160,45 +175,37 @@ class TraktAPI(RequestAPI):
             self.auth_dialog.update(int(progress))
             return True
 
-    def invalid_apikey(self):
-        if self.refresh_check == 0:
-            self.refresh_token()
-        self.refresh_check += 1
-
     def get_response(self, *args, **kwargs):
-        response = self.get_api_request(self.get_request_url(*args, **kwargs), headers=self.headers)
-        if self.refresh_check == 1:
-            self.get_response(*args, **kwargs)
-        return response
+        return self.get_api_request(self.get_request_url(*args, **kwargs), headers=self.headers)
 
-    def _sort_itemlist(self, items, sortmethod=None, sortdirection=None):
-        reverse = True if sortdirection == 'desc' else False
-        if sortmethod == 'rank':
+    def _sort_itemlist(self, items, sort_by=None, sort_how=None):
+        reverse = True if sort_how == 'desc' else False
+        if sort_by == 'rank':
             return sorted(items, key=lambda i: i.get('rank'), reverse=reverse)
-        elif sortmethod == 'added':
+        elif sort_by == 'added':
             return sorted(items, key=lambda i: i['listed_at'], reverse=reverse)
-        elif sortmethod == 'title':
+        elif sort_by == 'title':
             return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('title'), reverse=reverse)
-        elif sortmethod == 'released':
+        elif sort_by == 'released':
             return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('first_aired') if i.get('type') == 'show' else i.get(i.get('type'), {}).get('released'), reverse=reverse)
-        elif sortmethod == 'runtime':
+        elif sort_by == 'runtime':
             return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('runtime'), reverse=reverse)
-        elif sortmethod == 'popularity':
+        elif sort_by == 'popularity':
             return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('comment_count'), reverse=reverse)
-        elif sortmethod == 'percentage':
+        elif sort_by == 'percentage':
             return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('rating'), reverse=reverse)
-        elif sortmethod == 'votes':
+        elif sort_by == 'votes':
             return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('votes'), reverse=reverse)
-        elif sortmethod == 'random':
+        elif sort_by == 'random':
             random.shuffle(items)
             return items
         return sorted(items, key=lambda i: i['listed_at'], reverse=True)
 
     def get_itemlist_sorted(self, *args, **kwargs):
         response = self.get_response(*args, extended='full')
-        sortdirection = kwargs.get('sortdirection') or response.headers.get('X-Sort-How')
-        sortmethod = kwargs.get('sortmethod') or response.headers.get('X-Sort-By')
-        return self._sort_itemlist(response.json(), sortmethod=sortmethod, sortdirection=sortdirection)
+        sort_how = kwargs.get('sort_how') or response.headers.get('X-Sort-How')
+        sort_by = kwargs.get('sort_by') or response.headers.get('X-Sort-By')
+        return self._sort_itemlist(response.json(), sort_by=sort_by, sort_how=sort_how)
 
     def get_itemlist_ranked(self, *args, **kwargs):
         response = self.get_response(*args)
@@ -232,13 +239,13 @@ class TraktAPI(RequestAPI):
         page = kwargs.get('page') or 1
         limit = kwargs.get('limit') or 20
         cache_refresh = True if page == 1 else False
-        kwparams = {
+        params = {
             'cache_name': 'trakt.sortedlist',
             'cache_days': 0.125,
             'cache_refresh': cache_refresh,
-            'sortmethod': kwargs.pop('sortmethod', None),
-            'sortdirection': kwargs.pop('sortdirection', None)}
-        items = cache.use_cache(self.get_itemlist_sorted, *args, **kwparams)
+            'sort_by': kwargs.get('sort_by', None),
+            'sort_how': kwargs.get('sort_how', None)}
+        items = cache.use_cache(self.get_itemlist_sorted, *args, **params)
         index_z = page * limit
         index_a = index_z - limit
         index_z = len(items) if len(items) < index_z else index_z
@@ -250,6 +257,58 @@ class TraktAPI(RequestAPI):
         last_activity = self._get_sync_refresh_status('show', 'watched_at')
         cache_refresh = True if last_activity else False
         return self.get_request_lc('shows/{}/progress/watched'.format(uid), cache_refresh=cache_refresh)
+
+    def get_title(self, item):
+        return item.get('title', '')
+
+    def get_infolabels(self, item, trakt_type, infolabels=None, detailed=True):
+        infolabels = infolabels or {}
+        infolabels['title'] = self.get_title(item)
+        infolabels['year'] = item.get('year')
+        infolabels['mediatype'] = plugin.convert_type(plugin.convert_trakt_type(trakt_type), plugin.TYPE_DB)
+        return utils.del_empty_keys(infolabels)
+
+    def get_unique_ids(self, item, unique_ids=None):
+        unique_ids = unique_ids or {}
+        unique_ids['tmdb'] = item.get('ids', {}).get('tmdb')
+        unique_ids['imdb'] = item.get('ids', {}).get('imdb')
+        unique_ids['tvdb'] = item.get('ids', {}).get('tvdb')
+        unique_ids['slug'] = item.get('ids', {}).get('slug')
+        unique_ids['trakt'] = item.get('ids', {}).get('trakt')
+        return utils.del_empty_keys(unique_ids)
+
+    def get_info(self, item, trakt_type, base_item=None, detailed=True, params_definition=None):
+        base_item = base_item or {}
+        if item and trakt_type:
+            base_item['label'] = self.get_title(item)
+            base_item['infolabels'] = self.get_infolabels(item, trakt_type, base_item.get('infolabels', {}), detailed=detailed)
+            base_item['unique_ids'] = self.get_unique_ids(item, base_item.get('unique_ids', {}))
+            base_item['params'] = utils.get_params(
+                item, plugin.convert_trakt_type(trakt_type),
+                tmdb_id=base_item.get('unique_ids', {}).get('tmdb'),
+                params=base_item.get('params', {}),
+                definition=params_definition)
+            base_item['path'] = PLUGINPATH
+        return base_item
+
+    def get_basic_list(self, path, trakt_type, item_key=None, page=1, limit=20, params=None):
+        response = self.get_response(path, page=page, limit=limit) or []
+
+        response_json = response.json() if response else None
+        if not response_json:
+            return []
+        if not item_key:
+            items = [self.get_info(i, trakt_type, params_definition=params)
+                     for i in response_json if i.get('ids', {}).get('tmdb')]
+        else:
+            items = [self.get_info(i[item_key], trakt_type, params_definition=params)
+                     for i in response_json if i.get(item_key, {}).get('ids', {}).get('tmdb')]
+
+        num_pages = utils.try_parse_int(response.headers.get('X-Pagination-Page-Count', 0))
+        this_page = utils.try_parse_int(response.headers.get('X-Pagination-Page', 0))
+        if this_page < num_pages:
+            items.append({'next_page': this_page + 1})
+        return items
 
     def _get_activity(self, activities, trakt_type=None, activity_type=None):
         if not activities:

@@ -315,3 +315,19 @@ def split_items(items, separator='/'):
         items = items.split(separator)
     items = [items] if not isinstance(items, list) else items  # Make sure we return a list to prevent a string being iterated over characters
     return items
+
+
+def filtered_item(item, key, value, exclude=False):
+    boolean = False if exclude else True  # Flip values if we want to exclude instead of include
+    if key and value and item.get(key) == value:
+        boolean = exclude
+    return boolean
+
+
+def get_params(item, tmdb_type, tmdb_id=None, params=None, definition=None, base_tmdb_type=None):
+    params = params or {}
+    tmdb_id = tmdb_id or item.get('id')
+    definition = definition or {'info': 'details', 'tmdb_type': '{tmdb_type}', 'tmdb_id': '{tmdb_id}'}
+    for k, v in definition.items():
+        params[k] = v.format(tmdb_type=tmdb_type, tmdb_id=tmdb_id, base_tmdb_type=base_tmdb_type, **item)
+    return del_empty_keys(params)

@@ -171,7 +171,8 @@ TMDB_BASIC_LISTS = {
         'params': {
             'info': 'discover',
             'tmdb_type': 'movie',
-            'with_keywords': '{tmdb_id}'
+            'with_keywords': '{tmdb_id}',
+            'with_id': 'True'
         }
     },
     'genres': {
@@ -181,7 +182,31 @@ TMDB_BASIC_LISTS = {
         'params': {
             'info': 'discover',
             'tmdb_type': '{base_tmdb_type}',
-            'with_genres': '{tmdb_id}'
+            'with_genres': '{tmdb_id}',
+            'with_id': 'True'
         }
+    }
+}
+
+
+TRAKT_BASIC_LISTS = {
+    'trakt_trending': {
+        'path': '{trakt_type}s/trending',
+        'item_key': '{trakt_type}'
+    },
+    'trakt_popular': {
+        'path': '{trakt_type}s/popular'
+    },
+    'trakt_mostplayed': {
+        'path': '{trakt_type}s/played/weekly',
+        'item_key': '{trakt_type}'
+    },
+    'trakt_anticipated': {
+        'path': '{trakt_type}s/anticipated',
+        'item_key': '{trakt_type}'
+    },
+    'trakt_boxoffice': {
+        'path': '{trakt_type}s/boxoffice',
+        'item_key': '{trakt_type}'
     }
 }

@@ -7,7 +7,7 @@ from resources.lib.tmdb import TMDb
 from resources.lib.plugin import ADDONPATH, ADDON, PLUGINPATH
 
 
-class ListsSearch():
+class SearchLists():
     def list_searchdir_router(self, tmdb_type, **kwargs):
         if kwargs.get('clear_cache') != 'True':
             return self.list_searchdir(tmdb_type, **kwargs)

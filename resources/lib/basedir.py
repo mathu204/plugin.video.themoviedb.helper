@@ -437,7 +437,7 @@ def get_basedir_details(tmdb_type, tmdb_id, season=None, episode=None, detailed_
     return items
 
 
-class ListsBaseDir():
+class BaseDirLists():
     def list_basedir(self, info=None):
         if not info:
             return _get_basedir_main()
