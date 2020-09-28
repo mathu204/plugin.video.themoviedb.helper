@@ -72,6 +72,24 @@ class ListItem(object):
             return self.unique_ids.get('tvshow.tmdb')
         return self.unique_ids.get('tmdb')
 
+    def is_unaired(self, format_label=None, check_hide_settings=False):
+        if not self.infolabels.get('mediatype') in ['movie', 'tvshow', 'season', 'episode']:
+            return
+        try:
+            if utils.is_future_timestamp(self.infolabels.get('premiered'), "%Y-%m-%d", 10):
+                if format_label:
+                    self.label = format_label.format(self.label)
+                if not check_hide_settings:
+                    return True
+                elif self.infolabels.get('mediatype') == 'movie':
+                    if ADDON.getSettingBool('hide_unaired_movies'):
+                        return True
+                elif self.infolabels.get('mediatype') in ['tv', 'season', 'episode']:
+                    if ADDON.getSettingBool('hide_unaired_episodes'):
+                        return True
+        except Exception as exc:
+            utils.kodi_log(u'Error: {}'.format(exc), 1)
+
     def _context_item_get_ftv_artwork(self):
         ftv_id = self.get_ftv_id()
         ftv_type = self.get_ftv_type()
@@ -148,6 +166,15 @@ class ListItem(object):
             self.params['info'] = 'episodes'
         elif self.infolabels.get('mediatype') == 'set':
             self.params['info'] = 'collection'
+
+    def set_episode_label(self, format_label='{season}x{episode:0>2}. {label}'):
+        if not self.infolabels.get('mediatype') == 'episode':
+            return
+        season = utils.try_parse_int(self.infolabels.get('season', 0))
+        episode = utils.try_parse_int(self.infolabels.get('episode', 0))
+        if not season or not episode:
+            return
+        self.label = format_label.format(season=season, episode=episode, label=self.infolabels.get('title', ''))
 
     def set_unique_ids_to_infoproperties(self):
         for k, v in self.unique_ids.items():

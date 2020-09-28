@@ -198,6 +198,11 @@ def date_to_format(time_str, str_fmt="%A", time_fmt="%Y-%m-%d", time_lim=10, utc
     return time_obj.strftime(str_fmt)
 
 
+def is_future_timestamp(time_str, time_fmt="%Y-%m-%dT%H:%M:%S", time_lim=19, utc_convert=False):
+    if convert_timestamp(time_str, time_fmt, time_lim, utc_convert) > datetime.datetime.now():
+        return time_str
+
+
 def convert_timestamp(time_str, time_fmt="%Y-%m-%dT%H:%M:%S", time_lim=19, utc_convert=False):
     if not time_str:
         return

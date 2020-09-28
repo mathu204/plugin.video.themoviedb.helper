@@ -65,6 +65,9 @@ class Container(object, TMDbLists, BaseDirLists, SearchLists, UserDiscoverLists,
             if self.item_is_excluded(i):
                 continue  # TODO: Filter out unaired items and/or format labels
             listitem = ListItem(parent_params=parent_params, **i)
+            listitem.set_episode_label()
+            if listitem.is_unaired(format_label='[COLOR=ffcc0000][I]{}[/I][/COLOR]', check_hide_settings=True):
+                continue
             listitem.set_details(details=listitem_utils.get_tmdb_details(listitem, cache_only=tmdb_cache_only))  # Quick because only get cached
             listitem.set_details(details=listitem_utils.get_ftv_details(listitem), reverse=True)  # Slow when not cache only
             listitem.set_details(details=listitem_utils.get_kodi_details(listitem), reverse=True)  # Quick because local db
