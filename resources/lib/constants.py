@@ -19,6 +19,8 @@ PLAYERS_BASEDIR_USER = 'special://profile/addon_data/plugin.video.themoviedb.hel
 
 PLAYERS_BASEDIR_BUNDLED = 'special://home/addons/plugin.video.themoviedb.helper/resources/players/'
 
+NO_LABEL_FORMATTING = ['details', 'upcoming', 'trakt_calendar', 'trakt_myairing', 'trakt_anticipated', 'library_nextaired']
+
 TMDB_ALL_ITEMS_LISTS = {
     'movie': {
         'type': 'movie',
@@ -208,5 +210,36 @@ TRAKT_BASIC_LISTS = {
     'trakt_boxoffice': {
         'path': '{trakt_type}s/boxoffice',
         'item_key': '{trakt_type}'
+    },
+    'trakt_collection': {
+        'path': 'sync/collection/{trakt_type}s',
+        'item_key': '{trakt_type}',
+        'authorize': True,
+        'paginate': True,
+        'sort_by': 'title',
+        'sort_how': 'asc'
+    },
+    'trakt_watchlist': {
+        'path': 'sync/watchlist/{trakt_type}s',
+        'item_key': '{trakt_type}',
+        'authorize': True,
+        'paginate': True,
+        'sort_by': 'unsorted'
+    },
+    'trakt_history': {
+        'path': 'sync/watched/{trakt_type}s',
+        'item_key': '{trakt_type}',
+        'authorize': True,
+        'paginate': True,
+        'sort_by': 'watched',
+        'sort_how': 'desc'
+    },
+    'trakt_mostwatched': {
+        'path': 'sync/watched/{trakt_type}s',
+        'item_key': '{trakt_type}',
+        'authorize': True,
+        'paginate': True,
+        'sort_by': 'plays',
+        'sort_how': 'desc'
     }
 }

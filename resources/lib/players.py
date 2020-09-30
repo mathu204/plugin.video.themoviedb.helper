@@ -169,7 +169,7 @@ class Players(object):
             return None
         details = ListItem(**details)
         details.infolabels['mediatype'] == 'movie' if tmdb_type == 'movie' else 'episode'
-        details.set_details(details=ItemUtils().get_external_ids(details))
+        details.set_details(details=ItemUtils().get_external_ids(details, season=season, episode=episode))
         return details
 
     def _get_detailed_item(self, tmdb_type, tmdb_id, season=None, episode=None):
@@ -198,14 +198,21 @@ class Players(object):
         item['now'] = datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')
 
         if tmdb_type == 'tv' and season is not None and episode is not None:
-            item['id'] = item.get('tvdb')
+            item['id'] = item['epid'] = item['eptvdb'] = item.get('tvdb')
             item['title'] = details.infolabels.get('title')  # Set Episode Title
             item['name'] = u'{0} S{1:02d}E{2:02d}'.format(item.get('showname'), utils.try_parse_int(season), utils.try_parse_int(episode))
             item['season'] = season
             item['episode'] = episode
             item['showpremiered'] = details.infoproperties.get('tvshow.premiered')  # TODO: Add tvshow infoproperties in TMDb module
             item['showyear'] = details.infoproperties.get('tvshow.year')  # TODO: Add tvshow infoproperties in TMDb module
-            # TODO: Add Episode IDs from Trakt - epid epimdb eptmdb eptrakt
+            item['eptmdb'] = details.unique_ids.get('tmdb')
+            item['epimdb'] = details.unique_ids.get('imdb')
+            item['eptrakt'] = details.unique_ids.get('trakt')
+            item['epslug'] = details.unique_ids.get('slug')
+            item['tmdb'] = details.unique_ids.get('tvshow.tmdb')
+            item['imdb'] = details.unique_ids.get('tvshow.imdb')
+            item['trakt'] = details.unique_ids.get('tvshow.trakt')
+            item['slug'] = details.unique_ids.get('tvshow.slug')
 
         for k, v in item.copy().items():
             if k not in constants.PLAYERS_URLENCODE:
@@ -219,6 +226,7 @@ class Players(object):
                 item[key + '_escaped+'] = quote(quote_plus(utils.try_encode_string(value)))
                 item[key + '_url'] = quote(utils.try_encode_string(value))
                 item[key + '_url+'] = quote_plus(utils.try_encode_string(value))
+        utils.kodi_log(item, 1)
         return item
 
     def _select_player(self, detailed=True):

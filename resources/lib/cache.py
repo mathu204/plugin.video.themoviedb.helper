@@ -7,12 +7,14 @@ _cache_name = 'plugin.video.themoviedb.helper.v4_0_2'
 
 def get_cache(cache_name):
     cache_name = cache_name or ''
+    # utils.kodi_log('GET CACHE: {}'.format(cache_name), 2)
     return _cache.get('{}.{}'.format(_cache_name, cache_name))
 
 
 def set_cache(my_object, cache_name, cache_days=14, force=False, fallback=None):
     cache_name = cache_name or ''
     if my_object and cache_name and cache_days:
+        # utils.kodi_log('SET CACHE: {}'.format(cache_name), 2)
         _cache.set('{}.{}'.format(_cache_name, cache_name), my_object, expiration=datetime.timedelta(days=cache_days))
     elif force:
         my_object = my_object or fallback
@@ -32,17 +34,23 @@ def use_cache(func, *args, **kwargs):
     cache_force = kwargs.pop('cache_force', False)
     cache_fallback = kwargs.pop('cache_fallback', False)
     cache_refresh = kwargs.pop('cache_refresh', False)
+    headers = kwargs.pop('headers', None)
     if not cache_name:
         for arg in args:
-            if arg:
-                cache_name = u'{0}/{1}'.format(cache_name, arg)
+            if not arg:
+                continue
+            cache_name = u'{0}/{1}'.format(cache_name, arg) if cache_name else u'{}'.format(arg)
         for key, value in kwargs.items():
-            if value:
-                cache_name = u'{0}&{1}={2}'.format(cache_name, key, value)
+            if not value:
+                continue
+            cache_name = u'{0}&{1}={2}'.format(cache_name, key, value) if cache_name else u'{0}={1}'.format(key, value)
     my_cache = get_cache(cache_name) if not cache_refresh else None
     if my_cache:
         return my_cache
     elif not cache_only:
+        if headers:
+            kwargs['headers'] = headers
+        # utils.kodi_log('GET REQUEST: {}'.format(cache_name), 1)
         my_object = func(*args, **kwargs)
         return set_cache(my_object, cache_name, cache_days, force=cache_force, fallback=cache_fallback)
 

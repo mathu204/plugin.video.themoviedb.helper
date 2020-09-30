@@ -31,9 +31,8 @@ class ItemUtils(object):
             return
         return {'art': self.ftv_api.get_all_artwork(listitem.get_ftv_id(), listitem.get_ftv_type())}
 
-    def get_external_ids(self, listitem):
-        unique_id = None
-        trakt_type = None
+    def get_external_ids(self, listitem, season=None, episode=None):
+        unique_id, trakt_type = None, None
         if listitem.infolabels.get('mediatype') == 'movie':
             unique_id = listitem.unique_ids.get('tmdb')
             trakt_type = 'movie'
@@ -45,11 +44,38 @@ class ItemUtils(object):
             trakt_type = 'show'
         if not unique_id or not trakt_type:
             return
-        return {'unique_ids': {
-            'trakt': self.trakt_api.get_id(id_type='tmdb', unique_id=unique_id, trakt_type=trakt_type, output_type='trakt'),
-            'slug': self.trakt_api.get_id(id_type='tmdb', unique_id=unique_id, trakt_type=trakt_type, output_type='slug'),
-            'imdb': self.trakt_api.get_id(id_type='tmdb', unique_id=unique_id, trakt_type=trakt_type, output_type='imdb'),
-            'tvdb': self.trakt_api.get_id(id_type='tmdb', unique_id=unique_id, trakt_type=trakt_type, output_type='tvdb')}}
+        trakt_slug = self.trakt_api.get_id(id_type='tmdb', unique_id=unique_id, trakt_type=trakt_type, output_type='slug')
+        if not trakt_slug:
+            return
+        details = self.trakt_api.get_details(trakt_type, trakt_slug, extended=None)
+        if not details:
+            return
+        if listitem.infolabels.get('mediatype') in ['movie', 'tvshow', 'season']:
+            return {
+                'unique_ids': {
+                    'tmdb': unique_id,
+                    'tvdb': details.get('ids', {}).get('tvdb'),
+                    'imdb': details.get('ids', {}).get('imdb'),
+                    'slug': details.get('ids', {}).get('slug'),
+                    'trakt': details.get('ids', {}).get('trakt')}}
+        episode_details = self.trakt_api.get_details(
+            trakt_type, trakt_slug,
+            season=season or listitem.infolabels.get('season'),
+            episode=episode or listitem.infolabels.get('episode'),
+            extended=None)
+        if episode_details:
+            return {
+                'unique_ids': {
+                    'tvshow.tmdb': unique_id,
+                    'tvshow.tvdb': details.get('ids', {}).get('tvdb'),
+                    'tvshow.imdb': details.get('ids', {}).get('imdb'),
+                    'tvshow.slug': details.get('ids', {}).get('slug'),
+                    'tvshow.trakt': details.get('ids', {}).get('trakt'),
+                    'tvdb': episode_details.get('ids', {}).get('tvdb'),
+                    'tmdb': episode_details.get('ids', {}).get('tmdb'),
+                    'imdb': episode_details.get('ids', {}).get('imdb'),
+                    'slug': episode_details.get('ids', {}).get('slug'),
+                    'trakt': episode_details.get('ids', {}).get('trakt')}}
 
     def get_tmdb_details(self, listitem, cache_only=True):
         return TMDb().get_details(

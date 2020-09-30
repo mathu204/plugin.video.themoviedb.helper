@@ -167,7 +167,7 @@ class ListItem(object):
         elif self.infolabels.get('mediatype') == 'set':
             self.params['info'] = 'collection'
 
-    def set_episode_label(self, format_label='{season}x{episode:0>2}. {label}'):
+    def set_episode_label(self, format_label=u'{season}x{episode:0>2}. {label}'):
         if not self.infolabels.get('mediatype') == 'episode':
             return
         season = utils.try_parse_int(self.infolabels.get('season', 0))

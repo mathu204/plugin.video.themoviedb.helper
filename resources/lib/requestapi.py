@@ -6,7 +6,7 @@ import resources.lib.cache as cache
 
 
 class RequestAPI(object):
-    def __init__(self, cache_short=None, cache_long=None, req_api_url=None, req_api_key=None, req_api_name=None):
+    def __init__(self, cache_short=None, cache_long=None, req_api_url=None, req_api_key=None, req_api_name=None, timeout=None):
         self.req_api_url = req_api_url or ''
         self.req_api_key = req_api_key or ''
         self.req_api_name = req_api_name or ''
@@ -15,6 +15,7 @@ class RequestAPI(object):
         self.cache_long = 14 if not cache_long or cache_long < 14 else cache_long
         self.cache_short = 1 if not cache_short or cache_short < 1 else cache_short
         self.headers = None
+        self.timeout = timeout or 10
 
     def translate_xml(self, request):
         if request:
@@ -29,7 +30,7 @@ class RequestAPI(object):
     def get_simple_api_request(self, request=None, postdata=None, headers=None):
         try:
             if not postdata:
-                return requests.get(request, headers=headers)
+                return requests.get(request, headers=headers, timeout=self.timeout)
             return requests.post(request, data=postdata, headers=headers)
         except Exception as err:
             self.req_connect_err = utils.set_timestamp()

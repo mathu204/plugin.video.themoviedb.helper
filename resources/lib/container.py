@@ -65,13 +65,13 @@ class Container(object, TMDbLists, BaseDirLists, SearchLists, UserDiscoverLists,
             if self.item_is_excluded(i):
                 continue  # TODO: Filter out unaired items and/or format labels
             listitem = ListItem(parent_params=parent_params, **i)
-            listitem.set_episode_label()
-            if listitem.is_unaired(format_label='[COLOR=ffcc0000][I]{}[/I][/COLOR]', check_hide_settings=True):
-                continue
+            if parent_params.get('info') not in constants.NO_LABEL_FORMATTING:
+                listitem.set_episode_label()
+                if listitem.is_unaired(format_label=u'[COLOR=ffcc0000][I]{}[/I][/COLOR]', check_hide_settings=True):
+                    continue
             listitem.set_details(details=listitem_utils.get_tmdb_details(listitem, cache_only=tmdb_cache_only))  # Quick because only get cached
             listitem.set_details(details=listitem_utils.get_ftv_details(listitem), reverse=True)  # Slow when not cache only
             listitem.set_details(details=listitem_utils.get_kodi_details(listitem), reverse=True)  # Quick because local db
-            # listitem.set_details(details=listitem_utils.get_external_ids(listitem))  # Too slow for return on value
             listitem.set_playcount(playcount=listitem_utils.get_playcount_from_trakt(listitem))  # Quick because of agressive caching of Trakt object and pre-emptive dict comprehension
             listitem.set_standard_context_menu()  # Set the context menu items
             listitem.set_unique_ids_to_infoproperties()  # Add unique ids to properties so accessible in skins

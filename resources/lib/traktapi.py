@@ -62,12 +62,15 @@ class TraktAPI(RequestAPI):
         # First time authorization in this session so let's confirm
         if self.authorization and xbmcgui.Window(10000).getProperty('TMDbHelper.TraktIsAuth') != 'True':
             # Check if we can get a response from user account
+            utils.kodi_log('Checking Trakt authorization', 1)
             response = self.get_simple_api_request('https://api.trakt.tv/sync/last_activities', headers=self.headers)
             # 401 is unauthorized error code so let's try refreshing the token
             if response.status_code == 401:
+                utils.kodi_log('Trakt unauthorized!', 1)
                 self.authorization = self.refresh_token()
             # Authorization confirmed so let's set a window property for future reference in this session
             if self.authorization:
+                utils.kodi_log('Trakt user account authorized', 1)
                 xbmcgui.Window(10000).setProperty('TMDbHelper.TraktIsAuth', 'True')
 
         return self.authorization
@@ -116,7 +119,9 @@ class TraktAPI(RequestAPI):
         self.poller()
 
     def refresh_token(self):
+        utils.kodi_log('Attempting to refresh Trakt token', 1)
         if not self.authorization or not self.authorization.get('refresh_token'):
+            utils.kodi_log('Trakt refresh token not found!', 1)
             return
         postdata = {
             'refresh_token': self.authorization.get('refresh_token'),
@@ -126,8 +131,10 @@ class TraktAPI(RequestAPI):
             'grant_type': 'refresh_token'}
         self.authorization = self.get_api_request('https://api.trakt.tv/oauth/token', postdata=postdata)
         if not self.authorization or not self.authorization.get('access_token'):
+            utils.kodi_log('Failed to refresh Trakt token!', 1)
             return
         self.on_authenticated(auth_dialog=False)
+        utils.kodi_log('Trakt token refreshed', 1)
         return self.authorization
 
     def poller(self):
@@ -148,17 +155,17 @@ class TraktAPI(RequestAPI):
 
     def on_aborted(self):
         """Triggered when device authentication was aborted"""
-        utils.kodi_log(u'Trakt Authentication Aborted!', 1)
+        utils.kodi_log(u'Trakt authentication aborted!', 1)
         self.auth_dialog.close()
 
     def on_expired(self):
         """Triggered when the device authentication code has expired"""
-        utils.kodi_log(u'Trakt Authentication Expired!', 1)
+        utils.kodi_log(u'Trakt authentication expired!', 1)
         self.auth_dialog.close()
 
     def on_authenticated(self, auth_dialog=True):
         """Triggered when device authentication has been completed"""
-        utils.kodi_log(u'Trakt Authenticated Successfully!', 1)
+        utils.kodi_log(u'Trakt authenticated successfully!', 1)
         ADDON.setSettingString('trakt_token', dumps(self.authorization))
         self.headers['Authorization'] = 'Bearer {0}'.format(self.authorization.get('access_token'))
         if auth_dialog:
@@ -178,41 +185,11 @@ class TraktAPI(RequestAPI):
     def get_response(self, *args, **kwargs):
         return self.get_api_request(self.get_request_url(*args, **kwargs), headers=self.headers)
 
-    def _sort_itemlist(self, items, sort_by=None, sort_how=None):
-        reverse = True if sort_how == 'desc' else False
-        if sort_by == 'rank':
-            return sorted(items, key=lambda i: i.get('rank'), reverse=reverse)
-        elif sort_by == 'added':
-            return sorted(items, key=lambda i: i['listed_at'], reverse=reverse)
-        elif sort_by == 'title':
-            return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('title'), reverse=reverse)
-        elif sort_by == 'released':
-            return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('first_aired') if i.get('type') == 'show' else i.get(i.get('type'), {}).get('released'), reverse=reverse)
-        elif sort_by == 'runtime':
-            return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('runtime'), reverse=reverse)
-        elif sort_by == 'popularity':
-            return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('comment_count'), reverse=reverse)
-        elif sort_by == 'percentage':
-            return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('rating'), reverse=reverse)
-        elif sort_by == 'votes':
-            return sorted(items, key=lambda i: i.get(i.get('type'), {}).get('votes'), reverse=reverse)
-        elif sort_by == 'random':
-            random.shuffle(items)
-            return items
-        return sorted(items, key=lambda i: i['listed_at'], reverse=True)
-
-    def get_itemlist_sorted(self, *args, **kwargs):
-        response = self.get_response(*args, extended='full')
-        sort_how = kwargs.get('sort_how') or response.headers.get('X-Sort-How')
-        sort_by = kwargs.get('sort_by') or response.headers.get('X-Sort-By')
-        return self._sort_itemlist(response.json(), sort_by=sort_by, sort_how=sort_how)
-
-    def get_itemlist_ranked(self, *args, **kwargs):
-        response = self.get_response(*args)
-        return sorted(response.json(), key=lambda i: i['rank'], reverse=False)
-
-    def get_imdb_top250(self):
-        return cache.use_cache(self.get_itemlist_ranked, 'users', 'nielsz', 'lists', 'active-imdb-top-250', 'items')
+    def get_response_json(self, *args, **kwargs):
+        try:
+            return self.get_api_request(self.get_request_url(*args, **kwargs), headers=self.headers).json()
+        except ValueError:
+            return {}
 
     def _get_id(self, id_type, unique_id, trakt_type=None, output_type=None):
         response = self.get_request_lc('search', id_type, unique_id, type=trakt_type)
@@ -235,28 +212,10 @@ class TraktAPI(RequestAPI):
             cache_name='trakt_get_id.{}.{}.{}.{}'.format(id_type, unique_id, trakt_type, output_type),
             cache_days=self.cache_long)
 
-    def get_itemlist_sorted_cached(self, *args, **kwargs):
-        page = kwargs.get('page') or 1
-        limit = kwargs.get('limit') or 20
-        cache_refresh = True if page == 1 else False
-        params = {
-            'cache_name': 'trakt.sortedlist',
-            'cache_days': 0.125,
-            'cache_refresh': cache_refresh,
-            'sort_by': kwargs.get('sort_by', None),
-            'sort_how': kwargs.get('sort_how', None)}
-        items = cache.use_cache(self.get_itemlist_sorted, *args, **params)
-        index_z = page * limit
-        index_a = index_z - limit
-        index_z = len(items) if len(items) < index_z else index_z
-        return {'items': items[index_a:index_z], 'pagecount': -(-len(items) // limit)}
-
-    def get_watched_progress(self, uid, hidden=False, specials=False, count_specials=False):
-        if not self.authorize() or not uid:
-            return
-        last_activity = self._get_sync_refresh_status('show', 'watched_at')
-        cache_refresh = True if last_activity else False
-        return self.get_request_lc('shows/{}/progress/watched'.format(uid), cache_refresh=cache_refresh)
+    def get_details(self, trakt_type, id_num, season=None, episode=None, extended='full'):
+        if not season or not episode:
+            return self.get_response_json(trakt_type + 's', id_num, extended=extended)
+        return self.get_response_json(trakt_type + 's', id_num, 'seasons', season, 'episodes', episode, extended=extended)
 
     def get_title(self, item):
         return item.get('title', '')
@@ -291,24 +250,119 @@ class TraktAPI(RequestAPI):
             base_item['path'] = PLUGINPATH
         return base_item
 
-    def get_basic_list(self, path, trakt_type, item_key=None, page=1, limit=20, params=None):
-        response = self.get_response(path, page=page, limit=limit) or []
+    def _sort_itemlist(self, items, sort_by=None, sort_how=None, trakt_type=None):
+        reverse = True if sort_how == 'desc' else False
+        if sort_by == 'rank':
+            return sorted(items, key=lambda i: i.get('rank'), reverse=reverse)
+        elif sort_by == 'plays':
+            return sorted(items, key=lambda i: i.get('plays'), reverse=reverse)
+        elif sort_by == 'watched':
+            return sorted(items, key=lambda i: i.get('last_watched_at'), reverse=reverse)
+        elif sort_by == 'added':
+            return sorted(items, key=lambda i: i.get('listed_at'), reverse=reverse)
+        elif sort_by == 'title':
+            return sorted(items, key=lambda i: i.get(trakt_type or i.get('type'), {}).get('title'), reverse=reverse)
+        elif sort_by == 'released':
+            return sorted(items, key=lambda i: i.get(trakt_type or i.get('type'), {}).get('first_aired')
+                          if (trakt_type or i.get('type')) == 'show'
+                          else i.get(trakt_type or i.get('type'), {}).get('released'), reverse=reverse)
+        elif sort_by == 'runtime':
+            return sorted(items, key=lambda i: i.get(trakt_type or i.get('type'), {}).get('runtime'), reverse=reverse)
+        elif sort_by == 'popularity':
+            return sorted(items, key=lambda i: i.get(trakt_type or i.get('type'), {}).get('comment_count'), reverse=reverse)
+        elif sort_by == 'percentage':
+            return sorted(items, key=lambda i: i.get(trakt_type or i.get('type'), {}).get('rating'), reverse=reverse)
+        elif sort_by == 'votes':
+            return sorted(items, key=lambda i: i.get(trakt_type or i.get('type'), {}).get('votes'), reverse=reverse)
+        elif sort_by == 'random':
+            random.shuffle(items)
+            return items
+        return sorted(items, key=lambda i: i.get('listed_at'), reverse=True)
 
-        response_json = response.json() if response else None
-        if not response_json:
-            return []
+    def get_itemlist_sorted(self, *args, **kwargs):
+        response = self.get_response(*args, extended=kwargs.get('extended'))
+        if not response:
+            return
+        return self._sort_itemlist(
+            items=response.json(),
+            sort_by=kwargs.get('sort_by') or response.headers.get('X-Sort-By'),
+            sort_how=kwargs.get('sort_how') or response.headers.get('X-Sort-How'),
+            trakt_type=kwargs.get('trakt_type'))
+
+    def get_itemlist_ranked(self, *args, **kwargs):
+        response = self.get_response(*args)
+        return sorted(response.json(), key=lambda i: i['rank'], reverse=False)
+
+    def get_itemlist_unsorted(self, *args, **kwargs):
+        return self.get_response(*args).json()
+
+    def get_itemlist_cached(self, *args, **kwargs):
+        page = utils.try_parse_int(kwargs.get('page')) or 1
+        limit = utils.try_parse_int(kwargs.get('limit')) or 20
+        func = self.get_itemlist_unsorted if kwargs.get('sort_by') == 'unsorted' else self.get_itemlist_sorted
+        cache_refresh = True if page == 1 else False
+        params = {
+            'cache_name': 'trakt.sortedlist',
+            'cache_days': 0.125,
+            'cache_refresh': cache_refresh,
+            'sort_by': kwargs.get('sort_by', None),
+            'sort_how': kwargs.get('sort_how', None),
+            'trakt_type': kwargs.get('trakt_type', None),
+            'extended': kwargs.get('extended', None)}
+        items = cache.use_cache(func, *args, **params)
+        return self.get_paginated_items(items, page=page, limit=limit)
+
+    def get_paginated_items(self, items, page=1, limit=20):
+        index_z = page * limit
+        index_a = index_z - limit
+        index_z = len(items) if len(items) < index_z else index_z
+        return {
+            'items': items[index_a:index_z],
+            'headers': {
+                'X-Pagination-Page-Count': -(-len(items) // limit),
+                'X-Pagination-Page': page}}
+
+    def get_basic_list(
+            self, path, trakt_type, item_key=None, page=1, limit=20, params=None, authorize=False,
+            paginate=False, sort_by=None, sort_how=None, extended=None):
+        if authorize and not self.authorize():
+            return
+        func = self.get_itemlist_cached if paginate else self.get_response
+        response = func(
+            path, page=page, limit=limit, sort_by=sort_by, sort_how=sort_how,
+            extended=extended, trakt_type=trakt_type if paginate else None)
+        if not response:
+            return
+        response_json = response.get('items', []) if paginate else response.json()
+        items = self.get_list_info(response_json, trakt_type, item_key=item_key, params=params)
+        if not items:
+            return
+        response_headers = response.get('headers', {}) if paginate else response.headers
+        return items + self.get_next_page(response_headers)
+
+    def get_list_info(self, response_json, trakt_type, item_key=None, params=None):
         if not item_key:
-            items = [self.get_info(i, trakt_type, params_definition=params)
-                     for i in response_json if i.get('ids', {}).get('tmdb')]
-        else:
-            items = [self.get_info(i[item_key], trakt_type, params_definition=params)
-                     for i in response_json if i.get(item_key, {}).get('ids', {}).get('tmdb')]
+            return [self.get_info(i, trakt_type, params_definition=params)
+                    for i in response_json if i.get('ids', {}).get('tmdb')]
+        return [self.get_info(i[item_key], trakt_type, params_definition=params)
+                for i in response_json if i.get(item_key, {}).get('ids', {}).get('tmdb')]
 
-        num_pages = utils.try_parse_int(response.headers.get('X-Pagination-Page-Count', 0))
-        this_page = utils.try_parse_int(response.headers.get('X-Pagination-Page', 0))
+    def get_next_page(self, response_headers=None):
+        num_pages = utils.try_parse_int(response_headers.get('X-Pagination-Page-Count', 0))
+        this_page = utils.try_parse_int(response_headers.get('X-Pagination-Page', 0))
         if this_page < num_pages:
-            items.append({'next_page': this_page + 1})
-        return items
+            return [{'next_page': this_page + 1}]
+        return []
+
+    def get_imdb_top250(self):
+        return cache.use_cache(self.get_itemlist_ranked, 'users', 'nielsz', 'lists', 'active-imdb-top-250', 'items')
+
+    def get_watched_progress(self, uid, hidden=False, specials=False, count_specials=False):
+        if not self.authorize() or not uid:
+            return
+        last_activity = self._get_sync_refresh_status('show', 'watched_at')
+        cache_refresh = True if last_activity else False
+        return self.get_request_lc('shows/{}/progress/watched'.format(uid), cache_refresh=cache_refresh)
 
     def _get_activity(self, activities, trakt_type=None, activity_type=None):
         if not activities:
