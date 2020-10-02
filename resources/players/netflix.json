@@ -32,4 +32,5 @@
                             {"keyboard": "Select"},
                             {"keyboard": "{showname}"}
                           ]
+    "fallback"          : {"play_movie": "youtube.json search_movie"}
 }
